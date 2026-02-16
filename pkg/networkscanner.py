@@ -494,9 +494,10 @@ class NetworkScannerAdapter(Adapter):
                     if valid_ip(ip_address) and valid_mac(mac_address):
                         ip_mac_lookup[ip_address] = mac_address
                         ip_mac_lookup[mac_address] = ip_address
-                print("_____")
-                print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
-                print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
+                if self.DEBUG:
+                    print("_____")
+                    print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
+                    print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
                     
                 # TODO: Not optimal to have to update both these sources of truth this way
                 # TODO: also validate against MAC from arp -a?
