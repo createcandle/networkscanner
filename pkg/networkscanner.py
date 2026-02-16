@@ -1042,9 +1042,11 @@ class NetworkScannerAdapter(Adapter):
                             
                                 spotted_mac = False
                                 nmap_line = str(nmap_line).replace('Nmap scan report for ','').rstrip()
-                                print("nmap_line is ip? -->" + str(nmap_line) + "<--")
+                                if self.DEBUG:
+                                    print("nmap_line is ip? -->" + str(nmap_line) + "<--")
                                 if valid_ip(nmap_line):
-                                    print("OK, valid ip: ", nmap_line)
+                                    if self.DEBUG:
+                                        print("OK, valid ip: ", nmap_line)
                                     current_nmap_ip = str(nmap_line)
                                     if not current_nmap_ip in available_ips[interface_name]:
                                         available_ips[interface_name][current_nmap_ip] = {}
