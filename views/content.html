@@ -1,0 +1,90 @@
+<div id="extension-networkscanner-content" class="extension-networkscanner-busy-doing-network-scan">
+  
+	<div id="extension-networkscanner-busy-scanning" class="extension-networkscanner-show-while-network-scanning extension-networkscanner-show-while-network-scanning">
+		<div id="extension-networkscanner-scanning-progress-bar-container" class="extension-networkscanner-hide-while-security-scanning"><div id="extension-networkscanner-scanning-progress-bar"></div></div>
+	</div>
+	
+    <div id="extension-networkscanner-content-container">
+        <h3 id="extension-networkscanner-title">Network Scanner</h3>
+
+        <div id="extension-networkscanner-tabs-container">
+            <div id="extension-networkscanner-overview-page">
+				
+				<div id="extension-networkscanner-waiting-two-minutes-message" class="extension-networkscanner-area extension-networkscanner-hidden">
+					<h1>Waiting 2 minutes...</h1>
+					<div id="extension-networkscanner-waiting-two-minutes-countdown"></div>
+					<div class="extension-networkscanner-spinner"><div></div><div></div><div></div><div></div></div>
+					<p>The Network Scanner does not fully start until two minutes after a (re)boot. This is to avoid interfering with other addons that may need the network to get set up properly.</p>
+				</div>
+				
+                <div id="extension-networkscanner-overview-list"></div>
+				<div id="extension-networkscanner-missing-list"></div>
+				<div id="extension-networkscanner-security-container" class="extension-networkscanner-fade-while-network-scanning">
+					<img id="extension-networkscanner-security-scan-icon" src="/extensions/networkscanner/images/candle_networkscanner_security_scan_icon.svg" id="extension-networkscanner-map-image" alt="Security scan icon" width="64">
+					<h2>Network vulnerability scan</h2>
+					<p>Smart home devices are infamous for their poor security. If they run outdated software they may be susceptible to hacking and other types of abuse. To find out if any devices are vulnerable you can run a scan on networks that the Candle Controller is connected to.</p>
+					
+					<p>Before you continue:</p>
+					<ul>
+						<li>Make sure you have <span class="extension-networkscanner-text-emphasis">permission</span> from the owner of each device on your network.</li>
+						<li>This scan requires an <span class="extension-networkscanner-text-emphasis">internet connection</span>, as it reaches out to a server that has a huge list of known vulnerabilities (details below)</a>.
+						<li>Be aware that this scan is intensive, and can temporarily <span class="extension-networkscanner-text-emphasis">cause network slowdown</span> or other disruptions.</li>
+						<li><span class="extension-networkscanner-text-emphasis">Stay calm</span>. The scan detects security vulnerablities, but can't tell if devices have actually been compromised. Actual risk of abuse depends on many more factors.</li>
+						<li><span class="extension-networkscanner-text-emphasis">Be patient</span>. The scan will take quite a while.</li>
+					</ul>
+					
+					<details>
+						<summary><span class="text-button">Learn more</span></summary>
+						<p>How it works:</p>
+						<ol>
+	  						<li>If it's been a while then the security scan itself will be udpated first. In case you're curious, this will download the latest version of the following file:
+								<br><br>
+								<a href="https://svn.nmap.org/nmap/scripts/vulners.nse" rel="noreferrer" target="_blank">https://svn.nmap.org/nmap/scripts/vulners.nse</a>
+								<br><br>
+								<div class="extension-networkscanner-flex-wrap extension-networkscanner-flex-space-between extension-networkscanner-flex-center">
+									<span><span>The security scan was last updated on: </span><span id="extension-networkscanner-security-last-update-time">?</span></span>
+									<button id="extension-networkscanner-security-update-button" class="text-button">Update now</button>
+								</div>
+							</li>
+	  						<li>The scan generates an inventory of your network's devices and their open ports, and ascertains which follow-up scans may be useful.</li>
+	  						<li>It then reaches out to a webserver that has a huge list of known vulnerabilities (their database is over 250 gigabytes!), and how to try to detect them. Learn more at:<br><br><a href="https://svn.nmap.org/nmap/scripts/vulners.nse" rel="noreferrer" target="_blank">https://nmap.org/nsedoc/scripts/vulners.html</a>.
+	  						<li>It downloads specific tests for the most likely vulnerabilities, and runs them.</li>
+	  						<li>When all is done you are shown a report.</li>
+						</ol>
+					</details>
+					
+					<div class="extension-networkscanner-area">
+						<img src="/extensions/networkscanner/images/candle_network_scanner_map_home.svg" id="extension-networkscanner-map-image" alt="A map of a network">
+						
+						<div id="extension-networkscanner-full-security-scan-buttons-container" class="extension-networkscanner-flex-center-end extension-networkscanner-flex-wrap">
+							<div id="extension-networkscanner-full-security-scan-interface-select-container"></div>
+							<button id="extension-networkscanner-full-security-scan-button" class="text-button">Start vulnerability scan</button>
+						</div>
+					</div>
+				</div>
+				
+				<div id="extension-networkscanner-interface-security-scan-output"></div>
+				
+			</div>
+		</div>
+        
+
+        <br/>
+        <br/>
+
+        <div id="extension-networkscanner-debug-warning" style="display:none">
+            <h2>Debugging is enabled</h2>
+            <p>This addon is currently set to save detailed information about its operation in the internal logs. This may impact your privacy, as this also means that insights into your behaviour might be stored in those logs.</p>
+            <p>You can disable debugging mode at the settings page for this addon.</p>
+        </div>
+
+    </div>
+    
+	<div id="extension-networkscanner-footer">
+		<div id="extension-networkscanner-rescan-button-container">
+			<div id="extension-networkscanner-rescan-button" class="extension-networkscanner-hide-while-network-scanning">Scan</div>
+			<div id="extension-networkscanner-network-scan-animation" class="extension-networkscanner-show-while-network-and-security-scanning"></div>
+		</div>
+	</div>
+
+</div>

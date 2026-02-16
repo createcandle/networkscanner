@@ -1,0 +1,917 @@
+#extension-networkscanner-view {
+  	height: 100%;
+  	box-sizing: border-box;
+	overflow: auto;
+	left: 0;
+    padding: 2rem;
+}
+
+#extension-networkscanner-content {
+  	text-align: left;
+  	font-size: 1.6rem;
+  	color: #eee;
+	height:auto;
+	min-height:100%;
+    max-width:130rem;
+    margin:0 auto;
+}
+
+
+.extension-networkscanner-flex{
+	display:flex;
+}
+.extension-networkscanner-flex-wrap{
+	display:flex;
+	flex-wrap:wrap;
+}
+.extension-networkscanner-flex-space-between{
+	display:flex;
+	justify-content:space-between;
+}
+
+.extension-networkscanner-flex-center-end{
+	display:flex;
+	justify-content:flex-end;
+	align-items:center;
+}
+
+.extension-networkscanner-flex-center{
+	display:flex;
+	align-items:center;
+}
+
+.extension-networkscanner-area{
+	padding:2rem;
+	border-radius:1rem;
+	background-color:rgba(0,0,0,.1);
+	margin:2rem 0;
+}
+
+#extension-networkscanner-view p,
+#extension-networkscanner-view ul,
+#extension-networkscanner-view ol{
+	line-height:160%;
+}
+#extension-networkscanner-view ul li,
+#extension-networkscanner-view ol li{
+	margin-bottom:1.5rem;
+	padding-right:5%;
+}
+
+body.kiosk .extension-networkscanner-hide-if-kiosk,
+.extension-networkscanner-hidden,
+#extension-networkscanner-content:not(.extension-networkscanner-busy-doing-network-scan):not(.extension-networkscanner-busy-doing-security-scan) .extension-networkscanner-show-while-network-and-security-scanning,
+#extension-networkscanner-content:not(.extension-networkscanner-busy-doing-network-scan) .extension-networkscanner-show-while-network-scanning,
+#extension-networkscanner-content.extension-networkscanner-busy-doing-network-scan .extension-networkscanner-hide-while-network-scanning,
+#extension-networkscanner-content:not(.extension-networkscanner-busy-doing-security-scan) .extension-networkscanner-show-while-security-scanning,
+#extension-networkscanner-content.extension-networkscanner-busy-doing-security-scan .extension-networkscanner-hide-while-security-scanning{
+	display:none!important;
+}
+
+#extension-networkscanner-content.extension-networkscanner-busy-doing-network-scan .extension-networkscanner-fade-while-network-scanning,
+#extension-networkscanner-content.extension-networkscanner-busy-doing-security-scan .extension-networkscanner-fade-while-security-scanning{
+	opacity:.3;
+	pointer-events:none;
+}
+
+body.kiosk #extension-networkscanner-view a[target="_blank"]{
+	pointer-events:none;
+}
+
+
+/*  TITLE  */
+
+#extension-networkscanner-icon{
+  display: inline-block;
+  width: 3rem;
+  height: 2rem;
+  background-image: url('../images/menu-icon.svg');
+  background-size: contain;
+  background-size: 2rem;
+  background-repeat: no-repeat;
+  background-position: 0;
+}
+
+#extension-networkscanner-title{
+	text-align:left;
+	font-family: 'Open Sans', sans-serif;
+	font-weight: normal;
+	font-size:1.8rem;
+    margin: 0 auto;
+    display: block;
+    padding: 1rem;
+    padding-left: 3.8rem;
+    font-size: 1.8rem;
+    background-size: 2.8rem;
+    background-repeat: no-repeat;
+    background-position: 0;
+    background-image: url('../images/menu-icon.svg');
+	width:17rem;
+	margin:0 auto;
+}
+
+
+/*  PAGES  */
+
+#extension-networkscanner-tabs-container{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    /*margin: 0 6rem;*/
+}
+
+#extension-networkscanner-tabs-container > div{
+    box-sizing:border-box;
+    /*background-color:rgba(255,255,255,.1);
+    margin: 2rem;*/
+    padding-top:2rem;
+}
+
+#extension-networkscanner-overview-page,
+#extension-internet-overview-page{
+    width:100%;
+    max-width:100%;
+}
+
+
+.extension-networkscanner-interface-container-title{
+	text-align:center;
+	margin-top:4rem;
+}
+
+.extension-networkscanner-interface-container{
+    width: 100%;
+	max-width:100rem;
+    display:grid;
+    justify-content:center;
+    margin:2rem auto;
+    grid-template-columns: 1fr;
+    grid-gap: 2rem;
+	column-gap: 2rem;
+}
+
+.extension-networkscanner-interface-container > .extension-networkscanner-item{
+    width: 100%;
+    min-width:15rem;
+    max-width:80rem;
+    position:relative;
+    margin-bottom:1rem;
+}
+
+
+
+#extension-networkscanner-waiting-two-minutes-message,
+#extension-networkscanner-lost-connection-message{
+	max-width:50rem;
+	margin:5rem auto;
+}
+
+#extension-networkscanner-waiting-two-minutes-message h1{
+	text-align:center;
+}
+
+#extension-networkscanner-waiting-two-minutes-countdown{
+	text-align:center;
+	font-size:2rem;
+}
+
+
+#extension-networkscanner-view{
+	overflow:auto;
+	max-height:100vh;
+}
+
+#main-menu #extension-networkscanner-menu-item{
+  	background-image: url('../images/menu-icon.svg');
+}
+
+
+#extension-networkscanner-content img{
+	max-width:100%;
+}
+
+
+
+
+
+/*  item  */
+
+
+.extension-networkscanner-list-item{
+	margin:2rem 0;
+	position:relative;
+	overflow:hidden;
+	display:flex;
+	flex-direction:column;
+	justify-content:space-between;
+}
+
+.extension-networkscanner-list-item-details,
+.extension-networkscanner-list-item{
+	width:100%;
+	background-color:rgba(0,0,0,.1);
+	border-radius:1rem;
+	padding:1rem 2rem;
+	box-sizing:border-box;
+}
+
+.extension-networkscanner-list-item-details:empty{
+	display:none;
+}
+
+.extension-networkscanner-list-item-self{
+	/*background-color: rgba(0, 255, 0, .1);
+	background-color: #0e4f59;*/
+	background-color: #041065;
+}
+
+.extension-networkscanner-list-item h3{
+	margin-bottom:2rem;
+	font-size:2.5rem;
+}
+
+/*
+.extension-networkscanner-list-item h3.extension-networkscanner-list-item-title:hover{
+	text-decoration:underline;
+}
+*/
+.extension-networkscanner-list-item-title:hover{
+	text-decoration:underline;
+}
+
+.extension-networkscanner-list-item ul:not(.extension-networkscanner-list-item-links){
+	margin-left:0;
+	padding-left:0;
+}
+.extension-networkscanner-list-item ul li:not(.extension-networkscanner-list-item-link){
+	list-style-type: none;
+	margin-left:0;
+}
+
+.extension-networkscanner-list-item-ip4,
+.extension-networkscanner-list-item-ip6{
+	display:block;
+}
+.extension-networkscanner-list-item-ip4 ~ .extension-networkscanner-list-item-ip6{
+	opacity:.6;
+}
+
+#extension-networkscanner-view a.extension-networkscanner-list-item-ip4:hover,
+#extension-networkscanner-view a.extension-networkscanner-list-item-ip6:hover{
+	text-decoration:underline;
+}
+
+.extension-networkscanner-list-item-mac,
+.extension-networkscanner-list-item-mac-vendor,
+.extension-networkscanner-list-item-model{
+	margin:1rem 0;
+}
+
+.extension-networkscanner-list-item-mac + .extension-networkscanner-list-item-mac2,
+.extension-networkscanner-list-item-mac-vendor + .extension-networkscanner-list-item-model{
+	margin-top:0;
+}
+
+.extension-networkscanner-list-item-mac-vendor,
+.extension-networkscanner-list-item-model{
+	font-style:italic;
+}
+
+.extension-networkscanner-list-item-admin-link a:hover{
+	background-color:rgb(125 175 210);
+}
+
+.extension-networkscanner-list-item-tags{
+	margin:2rem 0;
+	max-width:80%;
+}
+.extension-networkscanner-list-item-tag{
+	display:inline-block;
+	margin:0 1rem 1rem 0;
+	color:#999;
+	padding:.4rem .7rem;
+	border-radius:.5rem;
+	border:1px solid #ccc;
+}
+.extension-networkscanner-list-item-tag-danger{
+	background-color:red;
+}
+.extension-networkscanner-list-item-tag-warning{
+	background-color:yellow;
+}
+.extension-networkscanner-list-item-tag-ok{
+	background-color:green;
+}
+
+.extension-networkscanner-list-item-details{
+	margin-top:1rem;
+}
+
+.extension-networkscanner-list-item-show-details-button + .extension-networkscanner-list-item-details{
+	display:none;
+}
+
+#extension-networkscanner-view a{
+	color:white;
+	text-decoration:none;
+}
+
+a[class^='extension-networkscanner-list-item-ip']{
+	margin-top:1rem;
+}
+
+.extension-networkscanner-list-item-link{
+	display: inline-block;
+}
+    
+
+body:not(.kiosk) .extension-networkscanner-list-item-link a,
+body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
+	text-decoration:underline;
+}
+
+.extension-networkscanner-list-item-ip-services-list > li,
+.extension-networkscanner-list-item-ports > li,
+.extension-networkscanner-list-item-info > li{
+	display:flex;
+}
+
+.extension-networkscanner-list-item-ip-services-list > li{
+	justify-content:space-between;
+}
+.extension-networkscanner-list-item-port-service{
+	flex-grow:1;
+	padding-left: 2rem;
+}
+
+.extension-networkscanner-list-item-ip-services-list > li,
+.extension-networkscanner-list-item-links > li,
+.extension-networkscanner-list-item-ports > li,
+.extension-networkscanner-list-item-info > li{
+	padding:.7rem 0;
+	margin-bottom:.5rem;
+}
+
+.extension-networkscanner-list-item-ip-services-list > li:not(:last-of-type),
+.extension-networkscanner-list-item-links > li:not(:last-of-type),
+.extension-networkscanner-list-item-ports > li:not(:last-of-type),
+.extension-networkscanner-list-item-info > li:not(:last-of-type){
+	border-bottom:1px solid rgba(255,255,255,.1);
+}
+
+.extension-networkscanner-list-item-link a,
+.extension-networkscanner-list-item-info-key,
+.extension-networkscanner-list-item-info-value{
+	display:inline-block;
+	word-wrap:break-word;
+	word-break: break-all;
+	overflow-wrap: break-word;
+}
+
+.extension-networkscanner-list-item-port-nr,
+.extension-networkscanner-list-item-info-key{
+	min-width:8rem;
+	padding-right:2rem;
+	box-sizing:border-box;
+}
+.extension-networkscanner-list-item-info-key{
+	min-width:12rem;
+}
+
+.extension-networkscanner-list-item-port-protocol,
+.extension-networkscanner-list-item-info-value{
+	font-style:italic;
+}
+
+
+/*
+.extension-networkscanner-list-item-show-details-button{
+	float:right;
+}
+*/
+
+.extension-networkscanner-list-item-links{
+	padding-left:0;
+}
+.extension-networkscanner-list-item-links > li{
+	margin-left:2rem;
+}
+
+.extension-networkscanner-list-item-links:not(:empty):before{
+	content:'Links';
+	font-weight:bold;
+	display:block;
+	width:100%;
+	border-bottom:1px dotted white;
+	margin-top:3rem;
+	padding: 1rem 0;
+}
+
+.extension-networkscanner-list-item-ports:not(:empty):before{
+	content:'Ports';
+	font-weight:bold;
+	display:block;
+	width:100%;
+	border-bottom:1px dotted white;
+	margin-top:3rem;
+	padding: 1rem 0;
+}
+
+.extension-networkscanner-list-item-info:not(:empty):before{
+	content:'Info';
+	font-weight:bold;
+	display:block;
+	width:100%;
+	border-bottom:1px dotted white;
+	margin-top:3rem;
+	padding: 1rem 0;
+}
+
+
+.extension-networkscanner-list-item-message{
+	margin:1rem 0;
+	padding:1rem 0;
+	color:yellow;
+	display:flex;
+	align-items:center;
+}
+.extension-networkscanner-list-item-message:not(:empty)::before{
+	content:'ⓘ';
+	display:inline-block;
+	font-style:initial;
+	float:left;
+	padding-right:1rem;
+	font-size:2.6rem;
+	color:yellow;
+}
+
+
+.extension-networkscanner-item-footer-tabs{
+	display:flex;
+	flex-wrap:wrap;
+	justify-content:flex-end;
+}
+
+
+.extension-networkscanner-list-item-add-thing-button{
+	margin:1rem auto;
+	border-radius:1rem;
+	padding:1rem;
+	display:flex;
+	align-items:center;
+	text-align: center;
+	justify-content:center;
+	width:auto;
+	cursor:pointer;
+	opacity:.85;
+	background: right 1rem center no-repeat url(/images/add.svg);
+	background-size:2.5rem;
+	background-color:rgba(255,255,255,.1);
+}
+.extension-networkscanner-list-item-add-thing-button:hover{
+	opacity:1;
+}
+
+.extension-networkscanner-list-item-track-thing-button,
+.extension-networkscanner-list-item-thing-id{
+	padding-left:5rem;
+	padding-right:5rem;
+	background-image:url(../images/privacy-eye-open.svg);
+	background-position: right 1rem center;
+	background-repeat:no-repeat;
+	background-size:contain;
+}
+.extension-networkscanner-list-item-track-thing-button{
+	background-image:url(../images/privacy-eye-closed.svg);
+	width:100%;
+}
+
+.extension-networkscanner-list-item-admin-link,
+.extension-networkscanner-list-item-thing-id,
+.extension-networkscanner-list-item-show-details-button,
+.extension-networkscanner-list-item-track-thing-button,
+.extension-networkscanner-list-item-show-security-button,
+.extension-networkscanner-item-footer-tabs > button{
+	display: block;
+	margin: 1rem 0;
+	font-size:1.6rem;
+	width:100%;
+	box-sizing: border-box;
+}
+#extension-networkscanner-view .extension-networkscanner-list-item-thing-id{
+	display: block;
+	background-color:#cc6600;
+	text-align:center;
+}
+
+
+.extension-networkscanner-list-item-self .extension-networkscanner-list-item-track-thing-button{
+	display:none;
+}
+
+/*
+.extension-networkscanner-item-footer-tabs > button:not(:first-child){
+	margin-left:1rem;
+}
+*/
+
+.extension-networkscanner-item-security-container:not(:empty){
+	padding-bottom:4rem;
+}
+
+.extension-networkscanner-item-full-security-scan-button{
+	margin-right:1rem;
+	margin-bottom:1rem;
+}
+
+.extension-networkscanner-item-security-container select{
+	padding: .5rem 1rem;
+	font-size:1.6rem;
+	width:100%;
+}
+
+
+.extension-networkscanner-waiting-for-output{
+	pointer-events:none;
+	opacity:.5;
+}
+
+.extension-networkscanner-item-security-output{
+	margin:1rem 0;
+	padding:1rem;
+	background-color:rgba(0,0,0,.1);
+	border-radius:.5rem;
+	white-space:pre-wrap;
+}
+.extension-networkscanner-item-security-output:empty,
+.extension-networkscanner-item-security-output:empty + .extension-networkscanner-list-item-security-output-copy-button{
+	display:none;
+}
+
+.extension-networkscanner-list-item-security-output-copy-button{
+	position:relative;
+	display:inline-block;
+	background-color:rgba(0,0,0,.2);
+	padding: 0 1rem .5rem 1rem;
+	font-size:1rem;
+	border-radius:.5rem;
+	margin-right:auto;
+	top:-5rem;
+	right:1rem;
+	float: right;
+	cursor:pointer;
+	opacity:.5;
+}
+.extension-networkscanner-list-item-security-output-copy-button::before{
+	content:'⎘'; /* 📋 */
+	font-size:2rem;
+	margin-right:.3rem;
+	position: relative;
+	top: .2rem;
+}
+.extension-networkscanner-list-item-security-output-copy-button:hover{
+	opacity:1;
+}
+
+.extension-networkscanner-waiting-for-output .extension-networkscanner-list-item-security-output-copy-button{
+	display: none;
+}
+
+
+
+
+/*  Full security scan  */
+
+#extension-networkscanner-overview-list:empty ~ #extension-networkscanner-security-container{
+	display:none;
+}
+
+#extension-networkscanner-security-container{
+	max-width:60rem;
+	margin: 8rem auto;
+	padding: 2rem;
+	background-color: rgba(255, 255, 255, .1);
+	border-radius: 1rem;
+}
+
+#extension-networkscanner-security-container > h2 + p{
+	max-width:70%;
+	font-size:110%;
+	margin-bottom:2rem;
+}
+
+
+#extension-networkscanner-security-scan-icon{
+	float:right;
+	width:100px;
+	margin-top:1rem;
+}
+
+
+#extension-networkscanner-view details{
+	margin: 4rem 0;
+}
+#extension-networkscanner-view details > summary::marker,
+#extension-networkscanner-view details > summary::-webkit-details-marker,
+#extension-networkscanner-view details[open] summary{
+	display:none;
+	color: transparent;
+}
+
+#extension-networkscanner-view details > summary > span{
+	margin-left: -1.5rem;
+}
+
+
+.extension-networkscanner-text-emphasis{
+	font-weight:bold;
+	color:white;
+}
+
+
+
+#extension-networkscanner-security-update-button{
+	margin-left:auto;
+}
+
+#extension-networkscanner-full-security-scan-buttons-container{
+	margin-top:4rem;
+}
+
+#extension-networkscanner-full-security-scan-interface-select,
+#extension-networkscanner-full-security-scan-button{
+	font-size:2rem;
+	padding:1rem 1.5rem;
+	display: block;
+}
+#extension-networkscanner-full-security-scan-interface-select{
+	margin-right:1rem;
+}
+
+
+#extension-networkscanner-interface-security-scan-output{
+	padding:2rem;
+	margin:4rem 0;
+	border-radius:1rem;
+	background-color:black;
+}
+
+#extension-networkscanner-interface-security-scan-output:empty{
+	display:none;
+}
+
+
+
+/*  background icons  */
+
+.extension-networkscanner-list-item-background-icon{
+    background-size: contain;
+    overflow: visible;
+    background-repeat: no-repeat;
+    background-position: top right;
+    opacity: .1;
+    position: absolute;
+    top: 1rem;
+    right: -4rem;
+    width: 20rem;
+    height: 20rem;
+    pointer-events: none;
+}
+.extension-networkscanner-list-item-background-icon-candle{
+    background-image: url('../images/candle-icon.svg');
+}
+.extension-networkscanner-list-item-background-icon-printer{
+    background-image: url('../images/printer-icon.svg');
+}
+.extension-networkscanner-list-item-background-icon-laptop{
+    background-image: url('../images/laptop-icon.svg');
+}
+.extension-networkscanner-list-item-background-icon-server{
+    background-image: url('../images/server-icon.svg');
+}
+.extension-networkscanner-list-item-background-icon-audio{
+    background-image: url('../images/audio-icon.svg');
+}
+.extension-networkscanner-list-item-background-icon-router{
+	background-image: url('../images/router-icon.svg');
+}
+
+
+
+
+/*  scanning progress bar */
+
+
+#extension-networkscanner-scanning-progress-bar-container{
+	width:20rem;
+	max-width:100%;
+	height: 2rem;
+	border-radius:2rem;
+	border:2px solid #777;
+	background-color:#555;
+	overflow:hidden;
+	margin: 0 auto;
+}
+
+#extension-networkscanner-scanning-progress-bar{
+	width:0;
+	height:2rem;
+	background-color:rgba(255,255,255,.6);
+	transition: width 3s;
+}
+
+
+
+/*  loading spinner  */
+
+#extension-networkscanner-busy-scanning{
+    text-align:center;
+    position: fixed;
+	bottom:3.8rem;
+	right:9.6rem;
+    width: auto;
+	z-index:2;
+    pointer-events: none;
+}
+
+#extension-networkscanner-busy-scanning .extension-networkscanner-spinner{
+	top:6rem;
+}
+
+.extension-networkscanner-item-security-output .extension-networkscanner-spinner{
+	margin:2rem auto;
+	display: block;
+}
+
+.extension-networkscanner-spinner {
+  display: block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin:0 auto;
+}
+.extension-networkscanner-spinner div {
+  position: absolute;
+  top: 33px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.5);
+  animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+.extension-networkscanner-spinner div:nth-child(1) {
+  left: 8px;
+  animation: extension-networkscanner-spinner1 0.6s infinite;
+}
+.extension-networkscanner-spinner div:nth-child(2) {
+  left: 8px;
+  animation: extension-networkscanner-spinner2 0.6s infinite;
+}
+.extension-networkscanner-spinner div:nth-child(3) {
+  left: 32px;
+  animation: extension-networkscanner-spinner2 0.6s infinite;
+}
+.extension-networkscanner-spinner div:nth-child(4) {
+  left: 56px;
+  animation: extension-networkscanner-spinner3 0.6s infinite;
+}
+@keyframes extension-networkscanner-spinner1 {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes extension-networkscanner-spinner3 {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}
+@keyframes extension-networkscanner-spinner2 {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(24px, 0);
+  }
+}
+
+
+
+
+#extension-networkscanner-footer{
+	margin:8rem 0;
+	text-align:center;
+}
+
+
+#extension-networkscanner-rescan-button-container{
+	position:fixed;
+	bottom:2rem;
+	right:2rem;
+	width: 5.6rem;
+    height: 5.6rem;
+    border: none;
+	overflow:hidden;
+}
+#extension-networkscanner-rescan-button{
+	font-size:1.6rem;
+	width: 5.6rem;
+    height: 5.6rem;
+    border-radius: 2.8rem;
+    padding: 0;
+    background-color: #5d9bc7;
+	display:flex;
+	align-items:center;
+	justify-content:center;
+	cursor:pointer;
+}
+
+#extension-networkscanner-network-scan-animation{
+	width: 5.6rem;
+	height: 5.6rem;
+	border-radius: 50%;
+	background: conic-gradient(#00ff0055, #00ff00);
+	animation: scan 4s infinite linear;
+}
+
+.extension-networkscanner-busy-doing-security-scan #extension-networkscanner-network-scan-animation{
+	background: conic-gradient(#41B0F6555, #41B0F600);
+}
+
+@keyframes scan {
+	to {
+		transform: rotate(1turn);
+	}
+}
+
+
+
+#extension-networkscanner-debug-warning{
+    max-width:60rem;
+    margin:2rem auto;
+    padding:2rem;
+    background-color:red;
+    color:white;
+    border-radius:.5rem;
+}
+
+
+
+@media screen and (max-width: 640px) {
+    #extension-networkscanner-text-input-container{
+        flex-wrap:wrap;
+    }
+    /*
+    #extension-networkscanner-search-field{
+        margin-right:0;
+        margin-bottom:1rem;
+    }
+	*/
+    
+    .extension-networkscanner-item{
+        flex-direction:column;
+    }
+
+    .extension-networkscanner-item-action-button{
+        margin-left:auto;
+    }
+}
+
+
+@media screen and (min-width: 810px) {	
+	#extension-networkscanner-content:not(.extension-networkscanner-simple-row-view) .extension-networkscanner-interface-container{
+		grid-template-columns: 50% 50%;
+	}
+}
+
+
+@media screen and (min-width: 1025px) {
+	#extension-networkscanner-view{
+        height:100vh; 
+	}
+	
+	#extension-networkscanner-content-container{
+		height:auto;
+		/*width: calc(100% - 3rem);*/
+	}
+    
+    #extension-networkscanner-tabs-container > div{
+        padding:2rem;
+		margin: 0 6rem;
+        box-sizing:border-box;
+    }
+    
+	
+	.extension-networkscanner-list-item{
+		padding:2rem;
+	}
+	
+}
+
+
