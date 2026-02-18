@@ -18,7 +18,7 @@
 				</div>
 				
                 <div id="extension-networkscanner-overview-list"></div>
-				<div id="extension-networkscanner-missing-list"></div>
+				<div id="extension-networkscanner-missing-list" class="extension-networkscanner-interface-container"></div>
 				<div id="extension-networkscanner-security-container" class="extension-networkscanner-fade-while-network-scanning">
 					<img id="extension-networkscanner-security-scan-icon" src="/extensions/networkscanner/images/candle_networkscanner_security_scan_icon.svg" id="extension-networkscanner-map-image" alt="Security scan icon" width="64">
 					<h2>Network vulnerability scan</h2>
@@ -37,7 +37,7 @@
 						<summary><span class="text-button">Learn more</span></summary>
 						<p>How it works:</p>
 						<ol>
-	  						<li>If it's been a while then the security scan itself will be udpated first. In case you're curious, this will download the latest version of the following file:
+	  						<li>If it's been a while then the security scan itself will be updated first. In case you're curious, this will download the latest version of the following file:
 								<br><br>
 								<a href="https://svn.nmap.org/nmap/scripts/vulners.nse" rel="noreferrer" target="_blank">https://svn.nmap.org/nmap/scripts/vulners.nse</a>
 								<br><br>
@@ -58,12 +58,13 @@
 						
 						<div id="extension-networkscanner-full-security-scan-buttons-container" class="extension-networkscanner-flex-center-end extension-networkscanner-flex-wrap">
 							<div id="extension-networkscanner-full-security-scan-interface-select-container"></div>
-							<button id="extension-networkscanner-full-security-scan-button" class="text-button">Start vulnerability scan</button>
+							<button id="extension-networkscanner-full-security-scan-button" class="text-button extension-networkscanner-fade-while-security-scanning">Start vulnerability scan</button>
 						</div>
 					</div>
 				</div>
 				
-				<div id="extension-networkscanner-interface-security-scan-output"></div>
+				<div id="extension-networkscanner-interface-security-scan-nice-output"></div>
+				<div id="extension-networkscanner-interface-security-scan-output" class="extension-networkscanner-show-while-security-scanning"></div>
 				
 			</div>
 		</div>
@@ -82,7 +83,7 @@
     
 	<div id="extension-networkscanner-footer">
 		<div id="extension-networkscanner-rescan-button-container">
-			<div id="extension-networkscanner-rescan-button" class="extension-networkscanner-hide-while-network-scanning">Scan</div>
+			<div id="extension-networkscanner-rescan-button" class="extension-networkscanner-hide-while-network-scanning extension-networkscanner-hide-while-security-scanning">Scan</div>
 			<div id="extension-networkscanner-network-scan-animation" class="extension-networkscanner-show-while-network-and-security-scanning"></div>
 		</div>
 	</div>

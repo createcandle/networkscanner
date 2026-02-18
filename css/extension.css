@@ -58,6 +58,7 @@
 	padding-right:5%;
 }
 
+
 body.kiosk .extension-networkscanner-hide-if-kiosk,
 .extension-networkscanner-hidden,
 #extension-networkscanner-content:not(.extension-networkscanner-busy-doing-network-scan):not(.extension-networkscanner-busy-doing-security-scan) .extension-networkscanner-show-while-network-and-security-scanning,
@@ -525,6 +526,10 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 	margin-bottom:1rem;
 }
 
+.extension-networkscanner-item-security-show-more-button + select{
+	display:none;
+}
+
 .extension-networkscanner-item-security-container select{
 	padding: .5rem 1rem;
 	font-size:1.6rem;
@@ -580,6 +585,25 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 
 
 
+/*  missing items  list  */
+
+#extension-networkscanner-missing-list{
+	opacity:.4;
+}
+
+
+.extension-networkscanner-missing-list-item:not(:empty)::before{
+	content:'Missing:';
+	font-size:2rem;
+	display:block;
+	margin-top:4rem;
+	width:100%;
+}
+
+
+
+
+
 
 /*  Full security scan  */
 
@@ -610,7 +634,7 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 
 
 #extension-networkscanner-view details{
-	margin: 4rem 0;
+	margin: 1rem 0;
 }
 #extension-networkscanner-view details > summary::marker,
 #extension-networkscanner-view details > summary::-webkit-details-marker,
@@ -655,12 +679,62 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 	margin:4rem 0;
 	border-radius:1rem;
 	background-color:black;
+	white-space:pre-wrap;
 }
 
 #extension-networkscanner-interface-security-scan-output:empty{
 	display:none;
 }
 
+
+/* full security scan report */
+
+.extension-networkscanner-vulnerable-device-service-item li{
+	border-bottom:1px dotted rgba(255,255,255,.1);
+	padding:.5rem 0;
+	margin:.5rem 0;
+}
+
+.extension-networkscanner-vulnerable-device-vulnerability-url{
+	flex-grow:1;
+	margin:1rem 2rem;
+}
+.extension-networkscanner-vulnerable-device-severity-score{
+	min-width:10rem;
+	font-weight:bold;
+}
+.extension-networkscanner-vulnerable-device-exploit{
+	min-width:5rem;
+}
+
+.extension-networkscanner-vulnerable-device-service-item > summary{
+	background-color:rgba(0,0,0,.2);
+	border-radius:1rem;
+	padding:1rem 2rem;
+	cursor:pointer;
+}
+.extension-networkscanner-vulnerable-device-service-item > summary:hover{
+	background-color:rgba(0,0,0,.35);
+}
+
+.extension-networkscanner-vulnerable-device-service-item > summary > h4{
+	margin:.5rem 2rem .5rem 0;
+}
+
+
+.extension-networkscanner-vulnerable-device-summary-high,
+.extension-networkscanner-vulnerable-device-high-severity .extension-networkscanner-vulnerable-device-severity-score{
+	color:red;
+}
+.extension-networkscanner-vulnerable-device-summary-medium,
+.extension-networkscanner-vulnerable-device-medium-severity .extension-networkscanner-vulnerable-device-severity-score{
+	color:yellow;
+}
+
+.extension-networkscanner-vulnerable-device-summary-sub-count{
+	display:inline-block;
+	margin-left:2rem;
+}
 
 
 /*  background icons  */
@@ -841,7 +915,7 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 }
 
 .extension-networkscanner-busy-doing-security-scan #extension-networkscanner-network-scan-animation{
-	background: conic-gradient(#41B0F6555, #41B0F600);
+	background: conic-gradient(#0000ff55, #41B0F6);
 }
 
 @keyframes scan {

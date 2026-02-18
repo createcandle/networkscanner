@@ -145,7 +145,7 @@ class NetworkScannerAPIHandler(APIHandler):
                             
                             
                             for target in list(self.adapter.script_outputs.keys()):
-                                if self.adapter.script_outputs[target]['scan_start_timestamp'] and self.adapter.script_outputs[target]['scan_start_timestamp'] < time.time() - 3600:
+                                if self.adapter.script_outputs[target]['start_timestamp'] and self.adapter.script_outputs[target]['start_timestamp'] < time.time() - 3600:
                                     if self.DEBUG:
                                         print("pruning old network scan output: ", target)
                                     del self.adapter.script_outputs[target]

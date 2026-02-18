@@ -97,7 +97,7 @@ class NetworkScannerAdapter(Adapter):
         self.last_brute_force_scan_time = 0             # Allows the add-on to start a brute force scan right away.
         self.seconds_between_brute_force_scans = 1800  #1800  # 30 minutes     
 
-        self.busy_doing_security_scan = False
+        self.busy_doing_security_scan = 0
         self.script_outputs = {}
         self.last_scan_timestamp = int(time.time())
 
@@ -494,10 +494,9 @@ class NetworkScannerAdapter(Adapter):
                     if valid_ip(ip_address) and valid_mac(mac_address):
                         ip_mac_lookup[ip_address] = mac_address
                         ip_mac_lookup[mac_address] = ip_address
-                if self.DEBUG:
-                    print("_____")
-                    print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
-                    print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
+                print("_____")
+                print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
+                print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
                     
                 # TODO: Not optimal to have to update both these sources of truth this way
                 # TODO: also validate against MAC from arp -a?
@@ -833,7 +832,9 @@ class NetworkScannerAdapter(Adapter):
             self.scan_time_delta = time.time() - last_run
             if self.DEBUG:
                 print("clock: pinging all " + str(accepted_as_things_count) + " accepted devices took " + str(self.scan_time_delta) + " seconds.")
-                
+            
+            
+            
             delay = 5
             if self.scan_time_delta < 59:
                 if self.DEBUG:
@@ -847,6 +848,8 @@ class NetworkScannerAdapter(Adapter):
                 
             time.sleep(1)
             
+            if self.busy_doing_security_scan > 0:
+                self.busy_doing_security_scan -= 1
            
         
         
@@ -1042,11 +1045,9 @@ class NetworkScannerAdapter(Adapter):
                             
                                 spotted_mac = False
                                 nmap_line = str(nmap_line).replace('Nmap scan report for ','').rstrip()
-                                if self.DEBUG:
-                                    print("nmap_line is ip? -->" + str(nmap_line) + "<--")
+                                print("nmap_line is ip? -->" + str(nmap_line) + "<--")
                                 if valid_ip(nmap_line):
-                                    if self.DEBUG:
-                                        print("OK, valid ip: ", nmap_line)
+                                    print("OK, valid ip: ", nmap_line)
                                     current_nmap_ip = str(nmap_line)
                                     if not current_nmap_ip in available_ips[interface_name]:
                                         available_ips[interface_name][current_nmap_ip] = {}
@@ -2323,16 +2324,20 @@ class NetworkScannerAdapter(Adapter):
 
 
     def run_nmap_script(self,script=None,ifname=None,target=None):
-        
+        if self.DEBUG:
+            print("in run_nmap_script.  script, ifname, target:",script, ifname, target)
+            
         if not isinstance(script,str) or not isinstance(ifname,str):
             if self.DEBUG:
                 print("run_nmap_script: invalid script or ifname provided: ", script, ifname)
             return False
             
         if ifname == '':
+            if self.DEBUG:
+                print("run_nmap_script: ifname was empty string, aborting")
             return False
         
-        if self.busy_doing_security_scan == True:
+        if self.busy_doing_security_scan > 0:
             if self.DEBUG:
                 print("run_nmap_script: was already busy doing an intense scan: ", script, ifname, target)
             return False
@@ -2348,28 +2353,36 @@ class NetworkScannerAdapter(Adapter):
                 
             
                 if valid_ip(target):
-                    target_ips =  ' ' + target
-                    output_id = target
+                    target_ips =  ' ' + str(target)
+                    output_id = str(target)
                 elif valid_ip6(target):
-                    target_ips =  ' -6 ' + target
-                    output_id = target
+                    target_ips =  ' -6 ' + str(target)
+                    output_id = str(target)
                 elif str(ifname) in list(self.available_interfaces.keys()) and \
-                  'operstate' in self.available_interfaces[target] and \
-                  self.available_interfaces[target]['operstate'].upper() == 'UP' and \
-                  'addr_info' in self.available_interfaces[target] and \
-                  self.available_interfaces[target]['addr_info'] and \
-                  len(self.available_interfaces[target]['addr_info']) and \
-                  'local' in self.available_interfaces[target]['addr_info'][0]:
-                  
-                    if valid_ip(self.available_interfaces[target]['addr_info'][0]['local']):
-                        target_ips = ' ' + self.available_interfaces[target]['addr_info'][0]['local'] + '/24'
-                        self.busy_doing_security_scan = True
-                    elif valid_ip6(self.available_interfaces[target]['addr_info'][0]['local']):
+                  'operstate' in self.available_interfaces[ifname] and \
+                  self.available_interfaces[ifname]['operstate'].upper() == 'UP' and \
+                  'addr_data' in self.available_interfaces[ifname] and \
+                  self.available_interfaces[ifname]['addr_data'] and \
+                  'addr_info' in self.available_interfaces[ifname]['addr_data'] and \
+                  self.available_interfaces[ifname]['addr_data']['addr_info'] and \
+                  len(self.available_interfaces[ifname]['addr_data']['addr_info']) and \
+                  'local' in self.available_interfaces[ifname]['addr_data']['addr_info'][0]:
+                    if self.DEBUG:
+                        print("user wants to scan an interface")
+                    if valid_ip(self.available_interfaces[ifname]['addr_data']['addr_info'][0]['local']):
+                        target_ips = ' ' + self.available_interfaces[ifname]['addr_data']['addr_info'][0]['local'] + '/24'
+                        self.busy_doing_security_scan = 30 # maximum minutesfor an intense vulnerability scan
+                    elif valid_ip6(self.available_interfaces[ifname]['addr_data']['addr_info'][0]['local']):
                         if self.DEBUG:
                             print("user wants to scan an interface with an ip6 address (well not really)")
                         
                         #target_ips = ' -6 ' + self.available_interfaces[target]['addr_info'][0]['local'] + '/24'
                         #self.busy_doing_security_scan = True
+                
+                else:
+                    if self.DEBUG:
+                        print("\nrun_nmap_script: ERROR, NO VALID TARGET")
+                        print("self.available_interfaces[ifname]: ", json.dumps(self.available_interfaces[ifname],indent=4))
                 
                 # TODO: the script above takes the first ip array item. Maybe setting ip4 or ip6 should be an option? Or prefer ip6 if available?
                 # TODO: in case of ip6 the available ip6 addresses on that interface could all be looped over (since a brute-force scan is not an option with so many potential addresses)
@@ -2383,21 +2396,31 @@ class NetworkScannerAdapter(Adapter):
                         script_path = ' --script ' + str(os.path.join(str(self.nmap_scripts_dir),str(script)))
                         if self.DEBUG:
                             print("run_nmap_script: script_path: " + str(script_path))
-                    elif script == '-A':
+                    elif script == ' -A':
                         #nmap_command += ' -A ' + 
                         script_path = ' -A'
+                
+                    #if script == 'vulners.nse':
+                    script_path = ' -sV' + script_path
+                        
                 
                     #  + ' -sV'
                     # -Pn
         
+                    if self.DEBUG:
+                        print("run_nmap_script: script_path: " + str(script_path))
+                        
+        
                     if script_path and target_ips:
+                        
                         nmap_command = str(nmap_command) + str(script_path) + str(target_ips) + ' -vv'
                         if self.DEBUG:
+                            print("run_nmap_script: output_id: " + str(output_id))
                             print("run_nmap_script: nmap_command: " + str(nmap_command))
                         
                         self.script_outputs[output_id] = {'output':'Running scan...', 'ifname':ifname, 'start_timestamp':int(time.time()), 'command':str(nmap_command)}
                         
-                        from subprocess import Popen, PIPE, CalledProcessError
+                        #from subprocess import Popen, PIPE, CalledProcessError
 
                         def execute_command(cmd):
                             with subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True) as process:
@@ -2425,15 +2448,27 @@ class NetworkScannerAdapter(Adapter):
                             else:
                                 self.script_outputs[output_id]['output'] = 'Scan failed'
                     
-                        if self.busy_doing_security_scan:
-                            self.busy_doing_security_scan = False
+                        if self.busy_doing_security_scan > 0:
+                            self.busy_doing_security_scan = 0
                     
                         return True
-        
+                        
+                    else:
+                        self.busy_doing_security_scan = 0
+                        if self.DEBUG:
+                            print("\nrun_nmap_script: ERROR, script_path and/or target_ips did not pass final sanity check: ",script_path, target_ips)
+                else:
+                    self.busy_doing_security_scan = 0
+                    if self.DEBUG:
+                        print("\nrun_nmap_script: ERROR, target_ips did not turn into a string - ifname or target fell through?")
+            else:
+                if self.DEBUG:
+                    print("\nrun_nmap_script: ERROR, scripts dir was invalid or empty?")
+                
         except Exception as ex:
             if self.DEBUG:
-                print("caught error in run_nmap_script: " + str(ex))
-            self.busy_doing_security_scan = False
+                print("\ncaught ERROR in run_nmap_script: " + str(ex))
+            self.busy_doing_security_scan = 0
             
         
                 

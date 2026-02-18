@@ -6,6 +6,9 @@
 			//console.log("Adding networkscanner addon to menu");
 			this.addMenuEntry('Network Scanner');
             
+			
+			//console.log("window.API: ", window.API);
+			
             this.debug = false;
             this.interval = null;
 			this.avahi_lines = [];
@@ -21,6 +24,7 @@
 			this.nmap_scripts = [];
 			this.script_outputs = {};
 			this.last_script_outputs = '';
+			this.found_vulnerabilities = {};
 			
 			this.showing_details_for = [];
 			
@@ -38,7 +42,9 @@
 			this.should_quick_scan = true;
 			this.busy_doing_light_scan = true;
 			this.busy_doing_brute_force_scan = false;
-			this.busy_doing_security_scan = false;
+			this.busy_doing_security_scan = 0;
+			
+			this.previous_vulnerabilities_json = '';
 
             // Kiosk?
 			this.kiosk = false;
@@ -64,6 +70,8 @@
             this.get_init_data();
             
 			this.things = null;
+			
+			
 			
 	    }
 
@@ -343,7 +351,7 @@
 				if(typeof body.busy_doing_brute_force_scan == 'boolean'){
 					this.busy_doing_brute_force_scan = body.busy_doing_brute_force_scan;
 				}
-				if(typeof body.busy_doing_security_scan == 'boolean'){
+				if(typeof body.busy_doing_security_scan == 'number'){
 					this.busy_doing_security_scan = body.busy_doing_security_scan;
 				}
 				if(this.busy_doing_light_scan == false && this.busy_doing_brute_force_scan == false && this.should_quick_scan == false){
@@ -353,11 +361,11 @@
 					this.content_el.classList.add('extension-networkscanner-busy-doing-network-scan');
 				}
 				
-				if(this.busy_doing_security_scan == false){
+				if(this.busy_doing_security_scan == 0){
 					this.content_el.classList.remove('extension-networkscanner-busy-doing-security-scan');
 				}
 				else{
-					this.content_el.classList.add('extension-networkscanner-busy-doing-securiry-scan');
+					this.content_el.classList.add('extension-networkscanner-busy-doing-security-scan');
 				}
 				
 				if(typeof body.quick_scan_phase == 'number'){
@@ -579,12 +587,11 @@
 	  			console.error("networkscanner: caught error calling init: ", err);
 	        });
         }
-    	
-    
-	
-        
-		
-		run_nmap_script(script_name,ifname,target=null){
+
+
+
+
+		run_nmap_script(script_name=null,ifname=null,target=null){
 			if(this.debug){
 				console.log("networkscanner debug: in run_nmap_script.  script_name,ifname,target: ", script_name,ifname,target);
 			}
@@ -662,9 +669,10 @@
 							console.log("networkscanner debug: show_script_outputs: details.ifname: ", details.ifname);
 						}
 						if(details.ifname == ip){
-							interface_scan_output_el = this.view.querySelector('#extension-networkscanner-interface-security-scan-output');
+							const interface_scan_output_el = this.view.querySelector('#extension-networkscanner-interface-security-scan-output');
 							if(interface_scan_output_el){
 								interface_scan_output_el.textContent = stripHtml(details.output);
+								this.parse_security_scan_output(stripHtml(details.output), details.ifname);
 							}
 						}
 						else{
@@ -692,7 +700,265 @@
 			
     	}
 	
+		parse_security_scan_output(all_lines, ifname=null){
+			//console.log("in parse_security_scan_output. all_lines,ifname: ", typeof ifname, ifname, typeof all_lines, all_lines);
+			
+			if(typeof ifname != 'string'){
+				console.error("networkscanner: parse_security_scan_output: no valid ifname provided");
+				return
+			}
+			
+			if( typeof all_lines == 'string' && all_lines.indexOf('Nmap scan report for ') != -1 && all_lines.indexOf('https://vulners.com/') != -1){
+				
+				let found_vulnerabilities = {};
+				
+				const all_lines_chunks = all_lines.split('Nmap scan report for ');
+				//console.log("parse_security_scan_output: all_lines_chunks count: ", all_lines_chunks.length);
+				for(let lc = 0; lc < all_lines_chunks.length; lc++){
+					const device_lines = all_lines_chunks[lc].split('\n');
+					
+					//console.log("parse_security_scan_output: device_lines: ", device_lines);
+					if(device_lines.length < 2){
+						//console.log("parse_security_scan_output: skipping very short device: ", device_lines);
+						continue
+					}
+					if(device_lines[0].indexOf('host down') != -1){
+						//console.log("parse_security_scan_output: host down spotted, skipping: ", device_lines[0]);
+						continue
+					}
+					else if(this.validate_ip(device_lines[0])){
+						const device_ip = device_lines[0];
+						//console.log("parse_security_scan_output: first device line is a valid ip: ", device_ip);
+						
+						found_vulnerabilities[device_ip] = {};
+						
+						if( all_lines_chunks[lc].indexOf('| vulners: ') != -1){
+							const vulnerability_chunks = all_lines_chunks[lc].split('| vulners: ');
+							//console.log("vulnerability_chunks: ", vulnerability_chunks);
+						
+							for(let vc = 0; vc < vulnerability_chunks.length; vc++){
+								let lines = vulnerability_chunks[vc].split('\n');
+								//console.log("lines: ", lines);
+								let vulnerable_service_parts = [];
+								
+								if(lines[0].indexOf('cpe:') != -1){
+									vulnerable_service_parts = lines[0].split(':');
+								}
+								else if(lines[1].indexOf('cpe:') != -1){
+									vulnerable_service_parts = lines[1].split(':');
+								}
+									
+							
+								if(vulnerable_service_parts.length >= 5){
+									
+									let vulnerable_service_name = vulnerable_service_parts[3];
+									if(vulnerable_service_parts[2] != vulnerable_service_parts[3]){
+										vulnerable_service_name = vulnerable_service_parts[2] + " - " + vulnerable_service_name;
+									}
+									vulnerable_service_name = vulnerable_service_name + ' ' + vulnerable_service_parts[4] // version
+									found_vulnerabilities[device_ip][vulnerable_service_name] = {'system':vulnerable_service_parts[2],'service':vulnerable_service_parts[3],'version':vulnerable_service_parts[4],'items':[]}
+									
+									
+									for(let dl = 0; dl < lines.length; dl++){
+										if(lines[dl].indexOf('https://vulners.com/') != -1 && lines[dl].indexOf('\t') != 1){
+											let exploit_parts = lines[dl].split('\t');
+											if(exploit_parts.length >= 3){
+												const exploited = (lines[dl].indexOf('*EXPLOIT*') > -1) ? true : false;
+												//console.log("exploited: ", typeof exploited, exploited);
+												found_vulnerabilities[device_ip][vulnerable_service_name]['items'].push({'name':exploit_parts[1],'severity':exploit_parts[2],'url':exploit_parts[3],'exploit':exploited});
+
+											}
+											
+										}
+									}
+								}
+								
+							}
+						}
+						
+					}
+					else{
+						if(this.debug){
+							console.warn("networkscanner debug: parse_security_scan_output: device fell through");
+						}
+					}
+				}
+				
+				
+				const vulnerabilities_json = JSON.stringify(found_vulnerabilities,null,4);
+				if(vulnerabilities_json != this.previous_vulnerabilities_json){
+					this.previous_vulnerabilities_json = vulnerabilities_json;
+					this.found_vulnerabilities = found_vulnerabilities;
+					if(this.debug){
+						console.warn("networkscanner debug: FINAL this.found_vulnerabilities is now: ", this.found_vulnerabilities);
+					}
+					this.render_security_scan_output(ifname);
+				}
+				else{
+					if(this.debug){
+						console.log('found_vulnerabilities was the same as this.previous_found_vulnerabilities. Not re-rendering')
+					}
+				}
+				
+				
+				
+				
+				
+				
+				
+			}
+			
+		}
+			
+		
 	
+	
+		render_security_scan_output(ifname=null){
+		
+			if(typeof ifname != 'string'){
+				console.error("render_security_scan_output: no valid ifname provided");
+				return
+			}
+		
+			const interface_scan_nice_output_el = this.view.querySelector('#extension-networkscanner-interface-security-scan-nice-output');
+			if(interface_scan_nice_output_el){
+				interface_scan_nice_output_el.innerHTML = '';
+				
+				for (const [ip, services] of Object.entries(this.found_vulnerabilities)){
+					
+					const vulnerable_device_container_el = document.createElement('div');
+					vulnerable_device_container_el.classList.add('extension-networkscanner-vulnerable-device-item');
+					vulnerable_device_container_el.classList.add('extension-networkscanner-area');
+					
+					const vulnerable_device_title_el = document.createElement('h2');
+					vulnerable_device_title_el.textContent = ip;
+					
+					if(typeof this.available_ips[ifname] != 'undefined' && typeof this.available_ips[ifname][ip] != 'undefined' && typeof this.available_ips[ifname][ip]['ip'] == 'string' && this.available_ips[ifname][ip]['ip'] == ip && typeof this.available_ips[ifname][ip]['hostname'] == 'string'){
+						vulnerable_device_title_el.textContent = ip + ' - ' + this.available_ips[ifname][ip]['hostname'];
+					}
+					vulnerable_device_container_el.appendChild(vulnerable_device_title_el);
+					
+					
+					for (const [service_name, service_details] of Object.entries(services)){
+						//console.log("service_name, service_details: ", service_name, service_details);
+						
+						
+						
+						const vulnerable_device_service_container_el = document.createElement('details');
+						vulnerable_device_service_container_el.classList.add('extension-networkscanner-vulnerable-device-service-item');
+						
+						const vulnerable_device_service_summary_el = document.createElement('summary');
+						
+						const vulnerable_device_service_title_el = document.createElement('h4');
+						vulnerable_device_service_title_el.textContent = service_name;
+						
+						vulnerable_device_service_summary_el.appendChild(vulnerable_device_service_title_el);
+						vulnerable_device_service_container_el.appendChild(vulnerable_device_service_summary_el);
+						
+						
+						
+						const vulnerable_device_service_list_el = document.createElement('ul');
+						
+						if(typeof service_details['items'] == 'undefined'){
+							continue
+						}
+						
+						let severity_summary = {'total':service_details['items'].length, 'high':0,'medium':0,'low':0};
+						
+						for (let ser = 0; ser < service_details['items'].length; ser++){
+							//console.log("vulner: ", service_details['items'][ser]);
+							const vulnerable_device_service_list_item_el = document.createElement('li');
+							vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-flex-wrap');
+							vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-flex-space-between');
+							vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-flex-center');
+							
+							let vulnerability_name_el = document.createElement('span');
+							vulnerability_name_el.classList.add('extension-networkscanner-vulnerable-device-vulnerability-name');
+							vulnerability_name_el.textContent = service_details['items'][ser]['name']
+							vulnerable_device_service_list_item_el.appendChild(vulnerability_name_el);
+							
+							let vulnerability_link_wrapper_el = document.createElement('span');
+							let vulnerability_link_el = document.createElement('span');
+							if(this.kiosk){
+								vulnerability_link_el.textContent = service_details['items'][ser]['url'];
+							}
+							else{
+								vulnerability_link_el = document.createElement('a');
+								vulnerability_link_el.classList.add('text-button');
+								vulnerability_link_el.setAttribute('href', service_details['items'][ser]['url']);
+								vulnerability_link_el.setAttribute('target', '_blank');
+								vulnerability_link_el.setAttribute('rel', 'noreferrer');
+								vulnerability_link_el.textContent = 'Details';
+							}
+							vulnerability_link_el.classList.add('extension-networkscanner-vulnerable-device-vulnerability-url');
+							
+							vulnerability_link_wrapper_el.appendChild(vulnerability_link_el);
+							vulnerability_link_wrapper_el.classList.add('extension-networkscanner-vulnerable-device-vulnerability-url');
+							vulnerable_device_service_list_item_el.appendChild(vulnerability_link_wrapper_el);
+							
+							const severity_number_el = document.createElement('span');
+							severity_number_el.classList.add('extension-networkscanner-vulnerable-device-severity-score');
+							severity_number_el.textContent = service_details['items'][ser]['severity'];
+							severity_number_el.setAttribute('title','Severity');
+							vulnerable_device_service_list_item_el.appendChild(severity_number_el);
+							 
+							if(service_details['items'][ser]['severity'] > 8){
+								vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-vulnerable-device-high-severity');
+								severity_summary['high']++;
+							}
+							else if(service_details['items'][ser]['severity'] > 6){
+								vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-vulnerable-device-medium-severity');
+								severity_summary['medium']++;
+							}
+							else{
+								severity_summary['low']++;
+							}
+							
+							
+							const exploit_state_el = document.createElement('span');
+							exploit_state_el.classList.add('extension-networkscanner-vulnerable-device-exploit');
+							if(service_details['items'][ser]['exploit'] === true){
+								exploit_state_el.textContent = '!';
+								vulnerable_device_service_list_item_el.classList.add('extension-networkscanner-vulnerable-device-exploit-spotted');
+							}else{
+								exploit_state_el.textContent = '-';
+							}
+							vulnerable_device_service_list_item_el.appendChild(exploit_state_el);
+							
+							vulnerable_device_service_list_el.appendChild(vulnerable_device_service_list_item_el);
+						}
+						
+						
+						const severity_summary_wrapper_el = document.createElement('div');
+						severity_summary_wrapper_el.classList.add('extension-networkscanner-vulnerable-device-summary')
+						
+						for (const [counter_key, counter_value] of Object.entries(severity_summary)) {
+							const severity_counter_el = document.createElement('span');
+							severity_counter_el.classList.add('extension-networkscanner-vulnerable-device-summary-' + counter_key);
+							if(counter_key != 'total'){
+								severity_counter_el.classList.add('extension-networkscanner-vulnerable-device-summary-sub-count');
+							}
+							severity_counter_el.textContent = counter_key + ': ' + counter_value;
+							severity_summary_wrapper_el.appendChild(severity_counter_el);
+						}
+						vulnerable_device_service_summary_el.classList.add('extension-networkscanner-flex-wrap');
+						vulnerable_device_service_summary_el.classList.add('extension-networkscanner-flex-space-between');
+						vulnerable_device_service_summary_el.classList.add('extension-networkscanner-flex-center');
+						vulnerable_device_service_summary_el.appendChild(severity_summary_wrapper_el);
+						
+						
+						vulnerable_device_service_container_el.appendChild(vulnerable_device_service_list_el);
+						
+						vulnerable_device_container_el.appendChild(vulnerable_device_service_container_el);
+					}
+					
+					interface_scan_nice_output_el.appendChild(vulnerable_device_container_el);
+					
+					
+				}
+			}
+			
+		}
 	
 	
 	
@@ -798,7 +1064,7 @@
 						if(line.startsWith('=')){
 							if(this.debug){
 								//console.log("");
-								console.log("networkscanner debug: avahi line: ", line);
+								//console.log("networkscanner debug: avahi line: ", line);
 							}
 							let line_parts = line.split(';');
 							
@@ -810,7 +1076,7 @@
 							
 							const device_id = line_parts[6];
 							if(this.debug){
-								console.log("networkscanner debug: avahi device id: ", device_id);
+								//console.log("networkscanner debug: avahi device id: ", device_id);
 							}
 								
 							if(device_id){
@@ -887,7 +1153,7 @@
 										if(info_parts[k].startsWith('"')){info_parts[k] = info_parts[k].substr(1)}
 										if(info_parts[k].endsWith('"')){info_parts[k] = info_parts[k].substr(0,info_parts[k].length-1)}
 										if(this.debug){
-											console.log("networkscaner debug: avahi --info_part (useful for tags): ", info_parts[k]);
+											//console.log("networkscaner debug: avahi --info_part (useful for tags): ", info_parts[k]);
 										}
 										let info_key_val = info_parts[k].split('=');
 										if(info_key_val[1] && info_key_val[1].length){
@@ -1188,7 +1454,7 @@
 												for(let at = 0; at < this.avahi_parsed[avahi_keys[k]][current_key].length; at++){
 													if(device[current_key].indexOf( this.avahi_parsed[avahi_keys[k]][current_key][at] ) == -1){
 														if(this.debug){
-															console.log("networkscanner debug: copying tag from avahi: ", this.avahi_parsed[avahi_keys[k]][current_key][at], " to: ", device['tags']);
+															//console.log("networkscanner debug: copying tag from avahi: ", this.avahi_parsed[avahi_keys[k]][current_key][at], " to: ", device['tags']);
 														}
 														device['tags'].push(this.avahi_parsed[avahi_keys[k]][current_key][at])
 													}
@@ -1424,7 +1690,7 @@
 								
 								if(this.check_if_thing_exists(device.thing_id)){
 									if(this.debug){
-										console.warn("networkscanner debug: THING_ID: FOUND IN THINGS");
+										console.log("networkscanner debug: tracking: THING_ID: FOUND IN ACCEPTED THINGS: ", device.thing_id);
 									}
 									let thing_id_el = document.createElement("a");
 									thing_id_el.classList.add('text-button');
@@ -1437,7 +1703,7 @@
 								}
 								else{
 									if(this.debug){
-										console.warn("networkscanner debug: THING_ID: -NOT- FOUND IN THINGS");
+										console.log("networkscanner debug: tracking: THING_ID: -NOT- FOUND IN THINGS");
 									}
 									let thing_id_el = document.createElement("div");
 									thing_id_el.classList.add('extension-networkscanner-list-item-add-thing-button');
@@ -1638,7 +1904,22 @@
 									}
 								})
 								security_container_el.appendChild(item_full_information_scan_button_el);
-
+								
+								
+								
+								// ITEM security scan SHOW SELECT BUTTON
+								let item_security_show_more_scan_button_el = document.createElement("button");
+								item_security_show_more_scan_button_el.classList.add('text-button');
+								item_security_show_more_scan_button_el.classList.add('extension-networkscanner-item-security-show-more-button');
+								item_security_show_more_scan_button_el.classList.add('extension-networkscanner-fade-while-network-scanning');
+								item_security_show_more_scan_button_el.textContent = 'Advanced';
+								item_security_show_more_scan_button_el.addEventListener('click', () => {
+									item_security_show_more_scan_button_el.remove();
+								})
+								security_container_el.appendChild(item_security_show_more_scan_button_el);
+								
+								
+								
 								// ITEM PRECISION SCANS SELECT
 								let security_select_el = document.createElement('select');
 							
@@ -1986,7 +2267,9 @@
 								console.log("networkscanner debug: previously_found device that was not found (yet) in the scan: ", thing_id, details);
 							}
 							const missing_item_el = document.createElement('div');
+							missing_item_el.classList.add('extension-networkscanner-list-item');
 							missing_item_el.classList.add('extension-networkscanner-missing-list-item');
+							
 							let missing_html = '';
 							if(typeof details.hostname == 'string'){
 								missing_html = missing_html + '<h4>' + details.hostname + '</h4>';
@@ -2004,6 +2287,7 @@
 							else if(typeof details.mac_vendor == 'string'){
 								missing_html = missing_html + '<p>' + details.mac_vendor + '</p>';
 							}
+							missing_item_el.innerHTML = missing_html;
 							missing_items_container_el.appendChild(missing_item_el);
 						}
 					}
