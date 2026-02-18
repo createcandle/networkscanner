@@ -10,7 +10,7 @@ Using this add-on, devices on your local network can be added as a 'thing' in th
 - Shows you devices that are detected on your local network(s)
 - Allows you do track the presence of these devices
 - Allows you to run vulnerability scans on these devices
-- Advanced privacy features, such as easily disabled the device tracking, including temporarily.
+- Advanced privacy features, such as easily (temporarily) disabling the device tracking.
 
 
 ## Thanks to
