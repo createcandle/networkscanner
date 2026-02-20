@@ -21,7 +21,7 @@ mkdir -p lib package
 # Pull down Python dependencies
 pip3 install -r requirements.txt -t lib --no-binary :all: --prefix ""  --no-cache-dir --upgrade
 
-wget -O oui.csv http://standards-oui.ieee.org/oui/oui.csv
+wget  --retry-connrefused --waitretry=10 --read-timeout=20 --timeout=15 -t 5 -O oui.csv http://standards-oui.ieee.org/oui/oui.csv
 
 # Put package together
 cp -r pkg LICENSE manifest.json *.py oui.csv js images views css README.md lib package/
