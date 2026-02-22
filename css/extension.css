@@ -39,6 +39,11 @@
 	display:flex;
 	align-items:center;
 }
+.extension-networkscanner-flex-center-center{
+	display:flex;
+	align-items:center;
+	justify-content:center;
+}
 
 .extension-networkscanner-area{
 	padding:2rem;
@@ -99,7 +104,8 @@ body.kiosk #extension-networkscanner-view a[target="_blank"]{
 	font-weight: normal;
 	font-size:1.8rem;
     margin: 0 auto;
-    display: block;
+    display: flex;
+	align-items:center;
     padding: 1rem;
     padding-left: 3.8rem;
     font-size: 1.8rem;
@@ -108,7 +114,9 @@ body.kiosk #extension-networkscanner-view a[target="_blank"]{
     background-position: 0;
     background-image: url('../images/menu-icon.svg');
 	width:17rem;
+    min-height: 4rem;
 	margin:0 auto;
+
 }
 
 
@@ -589,18 +597,25 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 
 #extension-networkscanner-missing-list{
 	opacity:.4;
+	margin-top:9.6rem;
 }
 
 
 .extension-networkscanner-missing-list-item:not(:empty)::before{
-	content:'Missing:';
-	font-size:2rem;
+	content:'Not found:';
+	font-size:1.6rem;
 	display:block;
-	margin-top:4rem;
+	margin:1rem 0;
 	width:100%;
+	float:right;
 }
 
-
+.extension-networkscanner-missing-list-item{
+	justify-content:initial;
+}
+.extension-networkscanner-missing-list-item > *{
+	margin:0;
+}
 
 
 
@@ -644,7 +659,8 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 }
 
 #extension-networkscanner-view details > summary > span{
-	margin-left: -1.5rem;
+	display:inline-block;
+	margin: 1rem 0 2rem -1.5rem;
 }
 
 
@@ -774,6 +790,234 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 
 
 
+
+/*  SWITCH BETWEEN CANDLE CONTROLLERS IN MAIN MENU  */
+
+
+#extension-networkscanner-switch-candles-menu{
+	min-height:0;
+	max-height:0;
+	overflow:visible;
+	display: flex;
+	flex-direction:column;
+	margin-top:9.6rem;
+	box-sizing:border-box;
+}
+#extension-networkscanner-switch-candles-menu > ol{
+	display:none;
+}
+
+
+body.kiosk #extension-networkscanner-switch-candles-menu{
+	display:none;
+}
+
+
+
+
+#extension-networkscanner-switch-candles-menu > div{
+	height: 6.5rem;
+	min-height: 6.5rem;
+	max-height: 6.5rem;
+	width:100%;
+	font-size: 1.8rem;
+	display: flex;
+	align-items:center;
+	flex-shrink:0;
+	cursor:pointer;
+	pointer-events: auto;
+	box-sizing: border-box;
+}
+
+#extension-networkscanner-switch-candles-menu > div > span{
+	display:inline-block;
+}
+
+
+
+#extension-networkscanner-switch-candles-menu li{
+	cursor:pointer;
+	pointer-events: auto;
+}
+
+#extension-networkscanner-switch-candles-menu ol{
+	margin:0;
+	padding:0;
+	background-color: #0a324f;
+    max-height: calc(100% - 16.1rem);
+}
+
+#extension-networkscanner-switch-candles-menu ol > li > a{
+	background-image: url(../images/candle-icon.svg);
+}
+
+#extension-networkscanner-switch-candles-menu > div > span::first-letter,
+#extension-networkscanner-switch-candles-menu ol > li > a::first-letter{ 
+	text-transform: uppercase; 
+}
+
+#main-menu #extension-networkscanner-switch-candles-menu + ul{
+    list-style-type: none;
+    margin: 0;
+    padding: 0; 
+    max-height: calc(100% - 16.1rem);
+    overflow: auto;
+}
+
+
+
+@media screen and (max-width: 640px) {
+	
+	#menu-wordmark{
+		display:none;
+	}
+	
+	#extension-networkscanner-switch-candles-menu{
+		position: relative;
+	}
+	#extension-networkscanner-switch-candles-menu > div{
+        position: absolute;
+        top: -7.8rem;
+        left: 7.6rem;
+		padding-left:2rem;
+		width:calc(100% - 7.6rem);
+	}
+	
+	
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded{
+		z-index:2;
+		position: relative;
+		overflow:visible;
+		background-color:#0a324f;
+	}
+	
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > ol{
+		display:flex;
+		flex-direction:column;
+	}
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded ol > li:hover{
+		background-color:#7caed1;
+	}
+	
+	#extension-networkscanner-switch-candles-menu > div::after{
+		content:'';
+		height: 6.5rem;
+		min-height: 6.5rem;
+		max-height: 6.5rem;
+	    width: 5rem;
+	    margin-left: auto;
+		background-image: url('/images/select-arrow.svg');
+		background-repeat: no-repeat;
+		background-size: 1.25rem;
+		background-position: calc(100% - 2rem);
+	}
+	
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > div::after{
+		background-image: url('../images/refresh-icon.svg');
+		background-size: 2rem;
+		opacity:.5;
+	}
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > div:hover::after{
+		opacity:1;
+	}
+	
+	/*
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > div::after{
+		display:none;
+	}
+	*/
+}
+
+
+@media screen and (min-width: 641px) {
+	
+	#extension-networkscanner-switch-candles-menu{
+		position:fixed;
+	    bottom:0;
+		width:calc(100% - 4rem);
+		left:1rem;
+		right:1rem;
+		overflow-x:auto;
+		flex-direction:row;
+		min-height:6.5rem;
+		max-height:6.5rem;
+		margin-bottom:1.3rem;
+		background-color:transparent;
+		justify-content:center;
+	}
+	#extension-networkscanner-switch-candles-menu > div{
+		width:auto;
+	}
+	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > div:hover{
+		background-color:#7caed1;
+	}
+	
+	#extension-networkscanner-switch-candles-menu > ol{
+		display:flex;
+		flex-direction:row;
+		margin:0;
+		padding:0;
+		background-color: transparent;
+        overflow: hidden;
+        overflow-x: auto;
+		background-color:transparent;
+	}
+	
+	#extension-networkscanner-switch-candles-menu > ol > li{
+		margin-left:1rem;
+		opacity:.7;
+	}
+	#extension-networkscanner-switch-candles-menu > ol > li:hover{
+		opacity:1;
+	}
+	
+	#extension-networkscanner-switch-candles-menu > div > span,
+	#extension-networkscanner-switch-candles-menu > ol > li > a{
+		border-radius:3rem;
+		overflow:hidden;
+		background-size: 2.6rem;
+		background-repeat: no-repeat;
+		background-position: 1.5rem;
+		padding: 1rem 2rem 1rem 5rem;
+	}
+	
+	#extension-networkscanner-switch-candles-menu > div > span{
+		/*box-shadow: inset 0 0 1px 1px rgba(255, 255, 255, .2);
+		padding-left: 6.8rem;
+	    background-size: 3.2rem;
+	    background-repeat: no-repeat;
+	    background-position: 2rem;*/
+		padding-left: 5rem;
+	    background-image: url(../images/candle-icon.svg);
+		background-color: rgba(0, 0, 0, .15);
+	}
+	
+	
+	#extension-networkscanner-switch-candles-menu > ol > li > a{
+		background-color: rgba(255, 255, 255, .03);
+	}
+	
+	
+	body:not(.menu-list) #extension-power-settings-menu-item-li{
+		top: -1.3rem;
+		bottom:auto;
+	}
+	
+	
+}
+
+@media screen and (min-width: 1025px) {
+	#extension-networkscanner-switch-candles-menu{
+		justify-content:center;
+	}
+}
+
+
+
+
+
+
+
 /*  scanning progress bar */
 
 
@@ -794,7 +1038,6 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 	background-color:rgba(255,255,255,.6);
 	transition: width 3s;
 }
-
 
 
 /*  loading spinner  */

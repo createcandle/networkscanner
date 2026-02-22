@@ -28,7 +28,7 @@
   "options": {
     "default": {
       "Time window": 10,
-	  "Show Candle controllers": true,
+	  "Hide Candle controllers": false,
 	  "Addresses to not arping": "",
       "Debugging": false
     },
@@ -38,8 +38,8 @@
           "description": "How many minutes can a device disappear before it is marked offline? The default is 10 minutes. The minimum is 1, the maximum is 10800 (7 days).",
           "type": "number"
         },
-        "Show Candle controllers": {
-          "description": "Normally Candle controllers are ignored. If you want to see them in the scan results, check this box.",
+        "Hide Candle controllers": {
+          "description": "Check this box to hide Candle Controllers from the list of found devices.",
           "type": "boolean"
         },
 		"Addresses to not arping": {
@@ -56,7 +56,7 @@
     }
   },
   "short_name": "Network Scan",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "web_accessible_resources": [
     "css/*.css",
     "images/*.svg",

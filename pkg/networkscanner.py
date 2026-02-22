@@ -108,7 +108,7 @@ class NetworkScannerAdapter(Adapter):
         self.messages = []
         self.tcpdump = None
         
-        self.own_hostname = str(run_command('hostname')).lower() + '.local'
+        
 
         #NMAP
         self.nmap_installed = False
@@ -167,6 +167,7 @@ class NetworkScannerAdapter(Adapter):
         self.saved_devices_from_controller = {} # holds devices that the controller says it has already accepted
         self.persistent_data = {} # will hold data loaded from persistence file
         self.previously_found = {} # will hold the previously accepted devices recovered from persistence data
+        self.spotted_candle_hostnames = {}
         
         try:
             if os.path.isfile(self.persistence_file_path):
@@ -183,6 +184,9 @@ class NetworkScannerAdapter(Adapter):
                         
                     if 'last_security_update_time' in self.persistent_data:
                         self.last_security_update_time = self.persistent_data['last_security_update_time']
+                
+                    if 'spotted_candle_hostnames' in self.persistent_data:
+                        self.spotted_candle_hostnames = self.persistent_data['spotted_candle_hostnames']
                 
                 #print("Previously found items: = " + str(self.previously_found))
 
@@ -230,7 +234,28 @@ class NetworkScannerAdapter(Adapter):
         
         time.sleep(.3) # avoid swamping the sqlite database
         
+        
+            
         self.add_from_config() # Here we get data from the settings in the Gateway interface.
+
+        self.controller_start_time = None
+        
+        try:
+            if len(self.own_ip) == 0:
+                fresh_ip = get_own_ip()
+                if valid_ip(fresh_ip):
+                    self.own_ip = [fresh_ip]
+        except:
+            if self.DEBUG:
+                print("Error, could not get actual own IP address")
+                
+                
+        self.own_hostname = None
+        initial_own_hostname = run_command('hostname')
+        if isinstance(initial_own_hostname,str) and len(initial_own_hostname) > 1:
+            self.own_hostname = str(initial_own_hostname).lower().strip().rstrip() + '.local'
+            #self.spotted_candle_hostnames[self.own_hostname] = {'hostname':self.own_hostname,'last_spotted':int(time.time())}
+        
 
         try:
             if self.DEBUG:
@@ -247,8 +272,7 @@ class NetworkScannerAdapter(Adapter):
         if self.DEBUG:
             print("self.previously_found: " + str(self.previously_found ))
 
-        if not self.DEBUG:
-            time.sleep(5) # give it a few more seconds to make sure the network is up
+        
            
         self.selected_interface = "wlan0"
         self.select_interface() # checks if the preference is possible.
@@ -258,19 +282,12 @@ class NetworkScannerAdapter(Adapter):
         
         #self.DEBUG = False
            
-        try:
-            if len(self.own_ip) == 0:
-                fresh_ip = get_own_ip()
-                if valid_ip(fresh_ip):
-                    self.own_ip = [fresh_ip]
-        except:
-            if self.DEBUG:
-                print("Error, could not get actual own IP address")
+        
 
         # First scan
         time.sleep(2) # wait a bit before doing the quick scan. The gateway will pre-populate based on the 'handle-device-saved' method.
 
-        self.controller_start_time = None
+        
         try:
             controller_uptime = run_command('cat /proc/uptime')
             if isinstance(controller_uptime,str):
@@ -281,7 +298,8 @@ class NetworkScannerAdapter(Adapter):
                     if controller_uptime >= 0 and controller_uptime < 120:
                         time.sleep(120 - controller_uptime)
         except Exception as ex:
-            print("caught error getting controller uptime: " + str(ex))
+            if self.DEBUG:
+                print("caught error getting controller uptime: " + str(ex))
             time.sleep(120)
         
         self.waiting_two_minutes = False
@@ -334,8 +352,8 @@ class NetworkScannerAdapter(Adapter):
             if 'Debugging' in config:
                 self.DEBUG = bool(config['Debugging'])
             
-            if 'Show Candle controllers' in config:
-                self.ignore_candle_controllers = not bool(config['Show Candle controllers'])
+            if 'Hide Candle controllers' in config:
+                self.ignore_candle_controllers = bool(config['Hide Candle controllers'])
                 if self.DEBUG:
                     print("self.ignore_candle_controllers: " + str(self.ignore_candle_controllers))
             
@@ -441,8 +459,8 @@ class NetworkScannerAdapter(Adapter):
                         source_ip = split_message[0].split()[-1]
                         
 
-                        #if self.DEBUG:
-                        #    print("clock:  source_ip from tcpdump message: ", source_ip, message)
+                        if self.DEBUG:
+                            print("\nclock:  source_ip from tcpdump message: ", source_ip, message)
                             
                         if valid_ip(source_ip):
                             
@@ -451,15 +469,31 @@ class NetworkScannerAdapter(Adapter):
                                     print("clock: spotted another mDNS emitter IP: ", source_ip)
                                 mdns_emitters.append(source_ip)
                             
-                            if not source_ip in mdns_hostname_lookup and '(Cache flush) SRV ' in split_message[1] and '.:' in split_message[1]:
+                            if '(Cache flush) SRV ' in split_message[1] and '.:' in split_message[1]:
                                 hostname = split_message[1].split('(Cache flush) SRV ')[1].split('.:')[0].lower()
                                 if hostname.count(".") == 1 and not ' ' in hostname and not '<' in hostname and len(hostname) < 64:
                                     if self.DEBUG:
-                                        print("clock: got a hostname from live mDNS messages: ", hostname)
-                                    mdns_hostname_lookup[hostname] = source_ip
-                                    mdns_hostname_lookup[source_ip] = hostname
-                            
-                            
+                                        print("clock: got a hostname from live mDNS messages: ", hostname, ", from: ", message)
+                                    if not source_ip in mdns_hostname_lookup:
+                                        mdns_hostname_lookup[hostname] = source_ip
+                                        mdns_hostname_lookup[source_ip] = hostname
+                                    #if 'CandleMQTT-' in message or 'candlesmarthome' in message:
+                                    #    if self.DEBUG:
+                                    #        print("clock: nice, both hostname AND Candle-MQTT/candlesmarthome were in the message: ", hostname, message)
+                                    #    self.spotted_candle_hostnames[hostname] = {'hostname':hostname,'last_spotted':int(time.time()), 'hostname_source':'tcpdump'}
+                                else:
+                                    if self.DEBUG:
+                                        print("hostname was invalid?: ",hostname)
+                                
+                
+                avahi_browse_check = run_command("avahi-browse -p -l -a -r -k -t | grep 'CandleMQTT' | cut -d ';' -f 4 | sort | uniq | sed 's/CandleMQTT-//'")
+                if self.DEBUG:
+                    print("falling back to avahi-browse to get the candle hostnames list: ", avahi_browse_check)
+                if isinstance(avahi_browse_check,str):
+                    for hostname in avahi_browse_check.splitlines():
+                        self.spotted_candle_hostnames[hostname] = {'hostname':hostname + '.local', 'last_spotted':int(time.time()), 'hostname_source':'avahi'}
+                
+                
                 if self.DEBUG:
                     print("last minute's mdns_emitters: ", mdns_emitters)
             
@@ -469,16 +503,18 @@ class NetworkScannerAdapter(Adapter):
             succesfully_found = 0
             try:
                 # check if own hostname changed, and if so, take a shortcut to immediately start updating hostnames
-                current_own_hostname = str(run_command('hostname')).lower() + '.local'
-                if current_own_hostname != 'none.local' and current_own_hostname != self.own_hostname:
-                    if self.DEBUG:
-                        print("Detected that OWN hostname changed from ", self.own_hostname, " to ", current_own_hostname)
-                    self.own_hostname = current_own_hostname
-                    ip_addresses = str(run_command('hostname -I')).split()
-                    for ip_address in ip_addresses:
-                        if valid_ip(ip_address) or valid_ip6(ip_address):
-                            mdns_hostname_lookup[ip_address] = current_own_hostname
-                            mdns_hostname_lookup[current_own_hostname] = ip_address
+                current_own_hostname = run_command('hostname')
+                if isinstance(current_own_hostname,str) and len(current_own_hostname):
+                    current_own_hostname = current_own_hostname.lower().strip().rstrip() + '.local'
+                    if current_own_hostname != self.own_hostname:
+                        if self.DEBUG:
+                            print("Detected that OWN hostname changed from ", self.own_hostname, " to ", current_own_hostname)
+                        self.own_hostname = current_own_hostname
+                        ip_addresses = str(run_command('hostname -I')).split()
+                        for ip_address in ip_addresses:
+                            if valid_ip(ip_address) or valid_ip6(ip_address):
+                                mdns_hostname_lookup[ip_address] = current_own_hostname
+                                mdns_hostname_lookup[current_own_hostname] = ip_address
                     
                     slow_counter == 16
                     self.should_save = True
@@ -497,7 +533,7 @@ class NetworkScannerAdapter(Adapter):
                 print("_____")
                 print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
                 print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
-                    
+                print("spotted_candle_hostnames: \n", json.dumps(self.spotted_candle_hostnames,indent=4))
                 # TODO: Not optimal to have to update both these sources of truth this way
                 # TODO: also validate against MAC from arp -a?
                 for _id in previously_found_keys:
@@ -1086,8 +1122,8 @@ class NetworkScannerAdapter(Adapter):
                                             else:
                                                 available_ips[interface_name][current_nmap_ip]['ip4_services'][port_number]['protocol'] = 'udp'
                                                 
-                                            available_ips[interface_name][current_nmap_ip]['ip4_services'][port_number]['service'] = port_parts[2];
-                                            available_ips[interface_name][current_nmap_ip]['ip4_services'][port_number]['state'] = port_parts[1];
+                                            available_ips[interface_name][current_nmap_ip]['ip4_services'][port_number]['service'] = port_parts[2]
+                                            available_ips[interface_name][current_nmap_ip]['ip4_services'][port_number]['state'] = port_parts[1]
                                         else:
                                             if self.DEBUG:
                                                 print("\nERROR, port number was not a number?: ", port_number)
@@ -1566,7 +1602,7 @@ class NetworkScannerAdapter(Adapter):
                                         print("current_nmap_ip: ", current_nmap_ip)
                                     if not matched_ip4 in list(available_ips[ip6_ifname].keys()):
                                         if self.DEBUG:
-                                            print("\nERROR, current_nmap_ip not on current interface: ", ip6_ifname, matched_ip4, "BASED ON LINE: ", line);
+                                            print("\nERROR, current_nmap_ip not on current interface: ", ip6_ifname, matched_ip4, "BASED ON LINE: ", line)
                                         
                                     else:
                                         if not 'ip6' in list(available_ips[ip6_ifname][matched_ip4].keys()):
@@ -2766,6 +2802,7 @@ class NetworkScannerAdapter(Adapter):
                 #json.dump(self.previously_found, fp)
             
             data_to_write = {'previously_found':self.previously_found,
+                            'spotted_candle_hostnames':self.spotted_candle_hostnames,
                             'mayor_version':self.mayor_version,
                             'meso_version':self.meso_version,
                             'last_security_update_time':self.last_security_update_time,

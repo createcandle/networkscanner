@@ -15,6 +15,9 @@
 			this.avahi_parsed = {};
 			
 			this.own_ip = null;
+			this.own_hostname = null;
+			this.spotted_candle_hostnames = {};
+			
 			this.ignore_candle_controllers = false;
 			
 			this.poll_timeouts = 0;
@@ -45,6 +48,9 @@
 			this.busy_doing_security_scan = 0;
 			
 			this.previous_vulnerabilities_json = '';
+			
+			this.switch_candles_menu_el = null;
+			this.menu_scrim_listener_added = false;
 
             // Kiosk?
 			this.kiosk = false;
@@ -70,6 +76,8 @@
             this.get_init_data();
             
 			this.things = null;
+			
+			
 			
 			
 			
@@ -240,6 +248,8 @@
 				},100);
 			})
 			
+			
+			
 		}
 		
 		
@@ -258,174 +268,7 @@
 
 	        ).then((body) => {
                 
-                if(typeof body.debug == 'boolean'){
-                    this.debug = body.debug;
-                    if(this.debug){
-						const debug_warning_el = this.view.querySelector('#extension-networkscanner-debug-warning');
-						if(this.debug){
-							console.log("networkscanner debug: poll API result: ", body);
-						}
-                        if(debug_warning_el != null){
-                            debug_warning_el.style.display = 'block';
-                        }
-                    }
-                }
-                
-				if(typeof body.avahi_lines != 'undefined'){
-					this.avahi_lines = body.avahi_lines;
-					//this.regenerate_items();
-				}
-				else{
-					if(this.debug){
-						console.log("networkscanner debug: poll body did not contain avahi lines: ", body);
-					}
-				}
-				
-				if(typeof body.nmap_installed == 'boolean'){
-					this.nmap_installed = body.nmap_installed;
-					//this.regenerate_items();
-				}
-				
-				if(typeof body.own_ip != 'undefined'){
-					this.own_ip = body.own_ip;
-				}
-				
-				if(typeof body.scan_time_delta != 'undefined'){
-					this.scan_time_delta = body.scan_time_delta;
-					if(this.debug){
-						console.log("networkscanner debug: last periodic scan took: ", this.scan_time_delta + ' seconds');
-					}
-				}
-				
-				if(typeof body.waiting_two_minutes == 'boolean' && this.waiting_two_minutes == null){
-					const waiting_two_minutes_hint_el = this.view.querySelector('extension-networkscanner-waiting-two-minutes-message');
-					if(waiting_two_minutes_hint_el){
-						if(body.waiting_two_minutes == true){
-							waiting_two_minutes_hint_el.classList.remove('extension-networkscanner-hidden');
-						}
-						else{
-							waiting_two_minutes_hint_el.classList.add('extension-networkscanner-hidden');
-							this.waiting_two_minutes = false;
-						}
-					}
-				}
-				
-				if(typeof body.controller_start_time == 'number' && this.waiting_two_minutes == null){
-					const waiting_two_minutes_countdown_el = this.view.querySelector('extension-networkscanner-waiting-two-minutes-countdown');
-					if(waiting_two_minutes_countdown_el){
-						const elapsed_time_since_boot = (Date.now()/1000) - body.controller_start_time;
-						if(elapsed_time_since_boot > 0 && elapsed_time_since_boot < 120){
-							waiting_two_minutes_countdown_el.textContent = Math.floor(elapsed_time_since_boot) + ' seconds remaining';
-						}
-					}
-				}
-				
-				
-				
-				if(typeof body.last_security_update_time == 'number'){
-					if(body.last_security_update_time != this.last_security_update_time){
-						if(this.debug){
-							console.log("networkscanner debug: it seems the security defenitions were updated");
-						}
-						this.last_security_update_time = body.last_security_update_time;
-						const last_securty_update_time_el = this.view.querySelector('#extension-networkscanner-security-last-update-time');
-						if(last_securty_update_time_el){
-							if(this.last_security_update_time == 0){
-								last_securty_update_time_el.textContent = 'Never';
-							}
-							else{
-								last_securty_update_time_el.textContent = new Date(parseInt(this.last_security_update_time) * 1000).toDateString();
-							}
-						}
-					}
-				}
-				
-				
-				
-				if(typeof body.should_quick_scan == 'boolean'){
-					this.should_quick_scan = body.should_quick_scan;
-				}
-				if(typeof body.busy_doing_light_scan == 'boolean'){
-					this.busy_doing_light_scan = body.busy_doing_light_scan;
-				}
-				if(typeof body.busy_doing_brute_force_scan == 'boolean'){
-					this.busy_doing_brute_force_scan = body.busy_doing_brute_force_scan;
-				}
-				if(typeof body.busy_doing_security_scan == 'number'){
-					this.busy_doing_security_scan = body.busy_doing_security_scan;
-				}
-				if(this.busy_doing_light_scan == false && this.busy_doing_brute_force_scan == false && this.should_quick_scan == false){
-					this.content_el.classList.remove('extension-networkscanner-busy-doing-network-scan');
-				}
-				else{
-					this.content_el.classList.add('extension-networkscanner-busy-doing-network-scan');
-				}
-				
-				if(this.busy_doing_security_scan == 0){
-					this.content_el.classList.remove('extension-networkscanner-busy-doing-security-scan');
-				}
-				else{
-					this.content_el.classList.add('extension-networkscanner-busy-doing-security-scan');
-				}
-				
-				if(typeof body.quick_scan_phase == 'number'){
-					//console.log("received quick_scan_phase: ", typeof body.quick_scan_phase, body.quick_scan_phase);
-					if(!this.scanning_progress_bar_el){
-						this.scanning_progress_bar_el = this.view.querySelector('#extension-networkscanner-scanning-progress-bar');
-					}
-					if(this.scanning_progress_bar_el){
-						const width_percentage = (body.quick_scan_phase * 2) + '%';
-						//console.log("updating progress bar width to: ", width_percentage);
-						this.scanning_progress_bar_el.style.width = width_percentage;
-					}
-					this.quick_scan_phase = body.quick_scan_phase;
-				}
-				
-				
-				if(typeof body.available_ips != 'undefined' && typeof body.previously_found != 'undefined'){
-					this.available_ips = body.available_ips;
-					this.previously_found = body.previously_found;
-					
-					if(typeof body.pairing_done == 'boolean' && body.pairing_done == true){
-						API.getThings()
-						.then((things) => {
-							this.things = things;
-							this.regenerate_items();
-						})
-						.catch((err) => {
-							if(this.debug){
-								console.error("networkscanner debug: pairing done, but caught error getting list of things from window.API: ", err);
-							}
-						})
-					}
-					else{
-						this.regenerate_items();
-					}
-					
-				}
-				else{
-					if(this.debug){
-						console.error("poll body did not contain available_ips and/or previously_found: ", body);
-					}
-				}
-				
-				
-				if(typeof body.script_outputs != 'undefined'){
-					if(this.last_script_outputs != JSON.stringify(body.script_outputs)){
-						if(this.debug){
-							console.log("networkscanner debug: poll: script_outputs was different, calling show_script_outputs");
-						}
-						this.last_script_outputs = JSON.stringify(body.script_outputs);
-						this.script_outputs = body.script_outputs;
-						this.show_script_outputs();
-					}
-					else{
-						if(this.debug){
-							console.log("networkscanner debug: poll: script_outputs was the same as before, not calling show_script_outputs");
-						}
-					}
-				}
-				
+				this.parse_api_response(body);
 				this.poll_timeouts = 0;
 				
 	        }).catch((err) => {
@@ -530,19 +373,7 @@
 				}
 					
                 
-                if(typeof body.debug == 'boolean'){
-					if(this.debug != body.debug){
-						if(document.getElementById('extension-networkscanner-debug-warning') != null){
-							this.debug = body.debug;
-	                    	if(this.debug){
-	                            document.getElementById('extension-networkscanner-debug-warning').style.display = 'block';
-	                        }
-							else{
-								document.getElementById('extension-networkscanner-debug-warning').style.display = 'none';
-							}
-	                    }
-					}
-                }
+                
                 
 	        }).catch((err) => {
 	  			console.error("network scanner: caught error requesting scan: ", err);
@@ -562,31 +393,223 @@
 
 	        ).then((body) => {
                 
-                if(typeof body.debug != 'undefined'){
-                    this.debug = body.debug;
-                    if(this.debug){
-                        console.log("networkscanner debug: init API result: ", body);
-                        if(document.getElementById('extension-networkscanner-debug-warning') != null){
-                            document.getElementById('extension-networkscanner-debug-warning').style.display = 'block';
-                        }
-                    }
-                }
-                
-				
-				if(typeof body.ignore_candle_controllers == 'boolean'){
-					this.ignore_candle_controllers = body.ignore_candle_controllers;
-					//this.regenerate_items();
-				}
-				
-				if(typeof body.nmap_scripts != 'undefined' && body.nmap_scripts != null){
-					this.nmap_scripts = body.nmap_scripts;
-					//console.log("init:  this.nmap_scripts is now: ", this.nmap_scripts);
-				}
+                this.parse_api_response(body);
 			
 	        }).catch((err) => {
 	  			console.error("networkscanner: caught error calling init: ", err);
 	        });
         }
+
+
+		parse_api_response(body){
+            
+			if(!this.content_el){
+				this.content_el = this.view.querySelector('#extension-networkscanner-content');
+			}
+			
+            if(typeof body.debug == 'boolean'){
+				if(this.debug != body.debug){
+					if(document.getElementById('extension-networkscanner-debug-warning') != null){
+						this.debug = body.debug;
+                    	if(this.debug){
+                            document.getElementById('extension-networkscanner-debug-warning').style.display = 'block';
+                        }
+						else{
+							document.getElementById('extension-networkscanner-debug-warning').style.display = 'none';
+						}
+                    }
+				}
+            }
+			
+			
+			
+			
+			if(typeof body.ignore_candle_controllers == 'boolean'){
+				this.ignore_candle_controllers = body.ignore_candle_controllers;
+				//this.regenerate_items();
+			}
+			
+			if(typeof body.nmap_installed == 'boolean'){
+				this.nmap_installed = body.nmap_installed;
+			}
+			
+			if(typeof body.nmap_scripts != 'undefined' && body.nmap_scripts != null){
+				this.nmap_scripts = body.nmap_scripts;
+				//console.log("init:  this.nmap_scripts is now: ", this.nmap_scripts);
+			}
+			
+			if(typeof body.avahi_lines != 'undefined'){
+				this.avahi_lines = body.avahi_lines;
+				//this.regenerate_items();
+			}
+			
+			if(typeof body.own_ip == 'string'){
+				this.own_ip = body.own_ip;
+			}
+			
+			if(typeof body.scan_time_delta != 'undefined'){
+				this.scan_time_delta = body.scan_time_delta;
+				if(this.debug){
+					console.log("networkscanner debug: last periodic scan took: ", this.scan_time_delta + ' seconds');
+				}
+			}
+			
+			if(typeof body.waiting_two_minutes == 'boolean' && this.waiting_two_minutes == null){
+				const waiting_two_minutes_hint_el = this.view.querySelector('extension-networkscanner-waiting-two-minutes-message');
+				if(waiting_two_minutes_hint_el){
+					if(body.waiting_two_minutes == true){
+						waiting_two_minutes_hint_el.classList.remove('extension-networkscanner-hidden');
+					}
+					else{
+						waiting_two_minutes_hint_el.classList.add('extension-networkscanner-hidden');
+						this.waiting_two_minutes = false;
+					}
+				}
+			}
+			
+			if(typeof body.controller_start_time == 'number' && this.waiting_two_minutes == null){
+				const waiting_two_minutes_countdown_el = this.view.querySelector('extension-networkscanner-waiting-two-minutes-countdown');
+				if(waiting_two_minutes_countdown_el){
+					const elapsed_time_since_boot = (Date.now()/1000) - body.controller_start_time;
+					if(elapsed_time_since_boot > 0 && elapsed_time_since_boot < 120){
+						waiting_two_minutes_countdown_el.textContent = Math.floor(elapsed_time_since_boot) + ' seconds remaining';
+					}
+				}
+			}
+			
+			
+			
+			if(typeof body.last_security_update_time == 'number'){
+				if(body.last_security_update_time != this.last_security_update_time){
+					if(this.debug){
+						console.log("networkscanner debug: it seems the security defenitions were updated");
+					}
+					this.last_security_update_time = body.last_security_update_time;
+					const last_securty_update_time_el = this.view.querySelector('#extension-networkscanner-security-last-update-time');
+					if(last_securty_update_time_el){
+						if(this.last_security_update_time == 0){
+							last_securty_update_time_el.textContent = 'Never';
+						}
+						else{
+							last_securty_update_time_el.textContent = new Date(parseInt(this.last_security_update_time) * 1000).toDateString();
+						}
+					}
+				}
+			}
+			
+			
+			
+			if(typeof body.should_quick_scan == 'boolean'){
+				this.should_quick_scan = body.should_quick_scan;
+			}
+			if(typeof body.busy_doing_light_scan == 'boolean'){
+				this.busy_doing_light_scan = body.busy_doing_light_scan;
+			}
+			if(typeof body.busy_doing_brute_force_scan == 'boolean'){
+				this.busy_doing_brute_force_scan = body.busy_doing_brute_force_scan;
+			}
+			if(typeof body.busy_doing_security_scan == 'number'){
+				this.busy_doing_security_scan = body.busy_doing_security_scan;
+			}
+			
+			if(this.content_el){
+				if(this.busy_doing_light_scan == false && this.busy_doing_brute_force_scan == false && this.should_quick_scan == false){
+					this.content_el.classList.remove('extension-networkscanner-busy-doing-network-scan');
+				}
+				else{
+					this.content_el.classList.add('extension-networkscanner-busy-doing-network-scan');
+				}
+			
+				if(this.busy_doing_security_scan == 0){
+					this.content_el.classList.remove('extension-networkscanner-busy-doing-security-scan');
+				}
+				else{
+					this.content_el.classList.add('extension-networkscanner-busy-doing-security-scan');
+				}
+			}
+			
+			if(typeof body.quick_scan_phase == 'number'){
+				//console.log("received quick_scan_phase: ", typeof body.quick_scan_phase, body.quick_scan_phase);
+				if(!this.scanning_progress_bar_el){
+					this.scanning_progress_bar_el = this.view.querySelector('#extension-networkscanner-scanning-progress-bar');
+				}
+				if(this.scanning_progress_bar_el){
+					const width_percentage = (body.quick_scan_phase * 2) + '%';
+					//console.log("updating progress bar width to: ", width_percentage);
+					this.scanning_progress_bar_el.style.width = width_percentage;
+				}
+				this.quick_scan_phase = body.quick_scan_phase;
+			}
+			
+			
+			if(typeof body.available_ips != 'undefined' && typeof body.previously_found != 'undefined'){
+				this.available_ips = body.available_ips;
+				this.previously_found = body.previously_found;
+				
+				if(typeof body.pairing_done == 'boolean' && body.pairing_done == true){
+					API.getThings()
+					.then((things) => {
+						this.things = things;
+						this.regenerate_items();
+					})
+					.catch((err) => {
+						if(this.debug){
+							console.error("networkscanner debug: pairing done, but caught error getting list of things from window.API: ", err);
+						}
+					})
+				}
+				else{
+					this.regenerate_items();
+				}
+				
+			}
+			
+			
+			if(typeof body.script_outputs != 'undefined'){
+				if(this.last_script_outputs != JSON.stringify(body.script_outputs)){
+					if(this.debug){
+						console.log("networkscanner debug: script_outputs was different, calling show_script_outputs");
+					}
+					this.last_script_outputs = JSON.stringify(body.script_outputs);
+					this.script_outputs = body.script_outputs;
+					this.show_script_outputs();
+				}
+				else{
+					if(this.debug){
+						console.log("networkscanner debug: script_outputs was the same as before, not calling show_script_outputs");
+					}
+				}
+			}
+			
+			
+			if(this.kiosk == false && typeof body.own_hostname == 'string' && typeof body.spotted_candle_hostnames != 'undefined'){
+				if(this.debug){
+					console.log("body.own_hostname: ", body.own_hostname);
+					console.log("body.spotted_candle_hostnames: ", body.spotted_candle_hostnames);
+					console.log("this.switch_candles_menu_el: ", this.switch_candles_menu_el);
+				}
+				if(this.own_hostname != body.own_hostname || JSON.stringify(Object.keys(this.spotted_candle_hostnames)) != JSON.stringify(Object.keys(body.spotted_candle_hostnames))){
+					this.own_hostname = body.own_hostname;
+					this.spotted_candle_hostnames = body.spotted_candle_hostnames;
+					this.update_switch_candles_menu();
+				}
+				else if(this.switch_candles_menu_el == null){
+					this.update_switch_candles_menu();
+				}
+				else if(this.switch_candles_menu_el.innerHTML == ''){
+					this.update_switch_candles_menu();
+				}
+				else{
+					//console.log("update_switch_candles_menu should be ok"); 
+				}
+			}
+			else{
+				if(this.debug){
+					console.warn("networkscanner debug: body.own_hostname or body.spotted_candle_hostname invalid: ", body.own_hostname, body.spotted_candle_hostname);
+				}
+			}
+		}
+
 
 
 
@@ -2292,7 +2315,6 @@
 						}
 					}
 					
-					
 				}
 				
 			}
@@ -2302,7 +2324,169 @@
 		}
 	
     
+	
+	
+	
+	
+	
+	
+	
+	
+	
 		
+		update_switch_candles_menu(){
+			if(this.kiosk == true){
+				return
+			}
+			if(this.debug){
+				console.log("networkscanner debug: in update_switch_candles_menu. own_hostname, spotted_candle_hostnames: ", this.own_hostname, this.spotted_candle_hostnames);
+			}
+			let candle_hostnames = [];
+			
+			for (const [candle_hostname, candle_hostname_details] of Object.entries(this.spotted_candle_hostnames)) {
+				if(candle_hostname == this.own_hostname){
+					console.log("networkscanner debug: update_switch_candles_menu: skipping own hostname: ", this.own_hostname);
+					continue
+				}
+				candle_hostnames.push(candle_hostname);
+				/*
+				if(typeof candle_hostname_details['last_spotted'] == 'number' && candle_hostname_details['last_spotted'] > (Date.now() / 1000) - 300){
+					console.log("update_switch_candles_menu: OK, this hostname was spotted recently: ", candle_hostname);
+					candle_hostnames.push(candle_hostname);
+				}
+				else{
+					console.log("update_switch_candles_menu: skipping hostname that was spotted a while ago... ", candle_hostname);
+				}
+				*/
+			}
+			if(this.debug){
+				console.log("networkscanner debug: update_switch_candles_menu: candle_hostnames: ", candle_hostnames);
+			}
+			if(candle_hostnames.length){ // TODO:    > 1
+				candle_hostnames.sort();
+				if(this.debug){
+					console.log("networkscanner debug: update_switch_candles_menu: candle_hostnames: ", candle_hostnames);
+				}
+				if(!this.switch_candles_menu_el){
+					if(this.debug){
+						console.log("switch_candles_menu_el did not exist?");
+					}
+					this.switch_candles_menu_el = document.getElementById('extension-networkscanner-switch-candles-menu');
+				}
+				if(this.debug){
+					console.log("networkscanner debug: this.switch_candles_menu_el? ", typeof this.switch_candles_menu_el, this.switch_candles_menu_el);
+				}
+				if(this.switch_candles_menu_el){
+					if(this.debug){
+						console.log("networkscanner debug: weird, this.switch_candles_menu_el suddenly exists?", this.switch_candles_menu_el);
+					}
+				}
+				else{
+					if(this.debug){
+						console.log("networkscanner debug: update_switch_candles_menu: creating and inserting switch candles container");
+					}
+					const main_menu_wordmark_el = document.getElementById('menu-wordmark');
+					if(main_menu_wordmark_el){
+						if(this.debug){
+							console.log("networkscanner debug: update_switch_candles_menu: found the word-mark element");
+						}
+						this.switch_candles_menu_el = document.createElement('div');
+						this.switch_candles_menu_el.setAttribute('id','extension-networkscanner-switch-candles-menu');
+						main_menu_wordmark_el.insertAdjacentElement('afterend', this.switch_candles_menu_el);
+					}
+					else{
+						//console.error("networkscanner debug: update_switch_candles_menu: wordmark el not found");
+					}
+				}
+				if(this.switch_candles_menu_el){
+					//console.log("clearing switch_candles_menu_el html first before redrawing");
+					this.switch_candles_menu_el.innerHTML = '';
+					
+					const switch_candles_own_item_el = document.createElement('div');
+					switch_candles_own_item_el.classList.add('extension-networkscanner-center');
+					
+					const switch_candles_own_item_span_el = document.createElement('span');
+					switch_candles_own_item_span_el.textContent = this.own_hostname.replace('.local','');
+					switch_candles_own_item_el.appendChild(switch_candles_own_item_span_el);
+					
+					switch_candles_own_item_el.addEventListener('click', () => {
+						if(this.switch_candles_menu_el.classList.contains('extension-networkscanner-switch-candles-menu-expanded')){
+							window.location.reload(true); // reload and clear html cache
+						}
+						else{
+							this.switch_candles_menu_el.classList.add('extension-networkscanner-switch-candles-menu-expanded');
+						}
+						
+					});
+					this.switch_candles_menu_el.appendChild(switch_candles_own_item_el);
+					
+					
+					const switch_other_candles_list_el = document.createElement('ol');
+					for(let ch = 0; ch < candle_hostnames.length; ch++){
+						
+						const switch_other_candles_item_el = document.createElement('li');
+						
+						const switch_other_candles_item_link_el = document.createElement('a');
+						switch_other_candles_item_link_el.textContent = candle_hostnames[ch].replace('.local','');
+						
+						let other_candle_url = location.protocol + '//' + candle_hostnames[ch];
+						if(other_candle_url.indexOf('.') == -1){
+							other_candle_url += '.local';
+						}
+						if(this.debug){
+							console.log("networkscanner debug: other_candle_url: ", other_candle_url);
+						}
+						switch_other_candles_item_link_el.setAttribute('href',other_candle_url);
+						switch_other_candles_item_link_el.addEventListener('click', () => {
+							document.getElementById('connectivity-scrim').classList.remove('hidden');
+						})
+						
+						switch_other_candles_item_el.appendChild(switch_other_candles_item_link_el);
+						
+						switch_other_candles_list_el.appendChild(switch_other_candles_item_el);
+					}
+					this.switch_candles_menu_el.appendChild(switch_other_candles_list_el);
+					
+				}
+				else{
+					if(this.debug){
+						console.error("networkscanner debug: still no this.switch_candles_menu_el: ", this.switch_candles_menu_el);
+					}
+				}
+			}
+			else if(this.switch_candles_menu_el){
+				if(this.debug){
+					console.warn("networkscanner debug: update_switch_candles_menu: other candle controller(s) disappeared. Removing switch candles menu.");
+				}
+				this.switch_candles_menu_el.remove();
+				this.switch_candles_menu_el = null;
+			}
+			
+			if(this.menu_scrim_listener_added == false){
+				this.menu_scrim_listener_added = true;
+				const menu_scrim_el = document.getElementById('menu-scrim');
+				if(menu_scrim_el){
+					menu_scrim_el.addEventListener('click', () => {
+						if(this.debug){
+							console.log("networkscanner debug: clicked on menu scrim");
+						}
+						if(!this.switch_candles_menu_el){
+							this.switch_candles_menu_el = document.getElementById('extension-networkscanner-switch-candles-menu');
+						}
+						if(this.switch_candles_menu_el){
+							this.switch_candles_menu_el.classList.remove('extension-networkscanner-switch-candles-menu-expanded');
+						}
+						else{
+							if(this.debug){
+								console.error("networkscanner debug:  click on menu scrim: switch_candles_menu_el was still null");
+							}
+						}
+					})
+				}
+				
+			}
+			
+		}
 		
 		
 		

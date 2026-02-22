@@ -95,6 +95,15 @@ class NetworkScannerAPIHandler(APIHandler):
                                 #print("self.adapter.nmap_scripts: ", self.adapter.nmap_scripts)
                                 
                                 state = True
+                                
+                                
+                            for candle_hostname in list(self.adapter.spotted_candle_hostnames.keys()):
+                                if self.adapter.spotted_candle_hostnames[candle_hostname]['last_spotted'] and self.adapter.spotted_candle_hostnames[candle_hostname]['last_spotted'] < time.time() - 1200:
+                                    if self.DEBUG:
+                                        print("pruning Candle hostname that hasn't been spotted for 20 minutes: ", candle_hostname)
+                                    del self.adapter.spotted_candle_hostnames[candle_hostname]
+                                    self.adapter.should_save = True
+                                
                         except Exception as ex:
                             if self.DEBUG:
                                 print("caught error trying to scan nmap scripts dir: " + str(ex))
@@ -105,6 +114,8 @@ class NetworkScannerAPIHandler(APIHandler):
                           status=200,
                           content_type='application/json',
                           content=json.dumps({'state':'ok',
+                                              'own_hostname':self.adapter.own_hostname,
+                                              'spotted_candle_hostnames':self.adapter.spotted_candle_hostnames,
                                               'nmap_installed':self.adapter.nmap_installed,
                                               'nmap_scripts':self.adapter.nmap_scripts,
                                               'nmap_vulners_file_exists':self.adapter.nmap_vulners_file_exists,
@@ -150,6 +161,16 @@ class NetworkScannerAPIHandler(APIHandler):
                                         print("pruning old network scan output: ", target)
                                     del self.adapter.script_outputs[target]
                             
+                            for candle_hostname in list(self.adapter.spotted_candle_hostnames.keys()):
+                                if self.adapter.spotted_candle_hostnames[candle_hostname]['last_spotted'] and self.adapter.spotted_candle_hostnames[candle_hostname]['last_spotted'] < time.time() - 600:
+                                    if self.DEBUG:
+                                        print("pruning Candle hostname that hasn't been spotted for 10 minutes: ", candle_hostname)
+                                    del self.adapter.spotted_candle_hostnames[candle_hostname]
+                                    self.adapter.should_save = True
+                            
+                            
+                            
+                            
                         except Exception as ex:
                              if self.DEBUG:
                                  print("scan/poll: error: " + str(ex))
@@ -173,6 +194,8 @@ class NetworkScannerAPIHandler(APIHandler):
                                               'script_outputs':self.adapter.script_outputs,
                                               'nmap_vulnerability_scan_file_exists':nmap_vulners_file_exists,
                                               'own_ip':self.adapter.own_ip,
+                                              'own_hostname':self.adapter.own_hostname,
+                                              'spotted_candle_hostnames':self.adapter.spotted_candle_hostnames,
                                               'last_security_update_time':self.adapter.last_security_update_time,
                                               'pairing_done':pairing_done,
                                               'scan_time_delta':self.adapter.scan_time_delta,
