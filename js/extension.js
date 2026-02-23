@@ -584,9 +584,9 @@
 			
 			if(this.kiosk == false && typeof body.own_hostname == 'string' && typeof body.spotted_candle_hostnames != 'undefined'){
 				if(this.debug){
-					console.log("body.own_hostname: ", body.own_hostname);
-					console.log("body.spotted_candle_hostnames: ", body.spotted_candle_hostnames);
-					console.log("this.switch_candles_menu_el: ", this.switch_candles_menu_el);
+					console.log("networkscanner debug: body.own_hostname: ", body.own_hostname);
+					console.log("networkscanner debug: body.spotted_candle_hostnames: ", body.spotted_candle_hostnames);
+					console.log("networkscanner debug: this.switch_candles_menu_el: ", this.switch_candles_menu_el);
 				}
 				if(this.own_hostname != body.own_hostname || JSON.stringify(Object.keys(this.spotted_candle_hostnames)) != JSON.stringify(Object.keys(body.spotted_candle_hostnames))){
 					this.own_hostname = body.own_hostname;
@@ -630,7 +630,7 @@
 					}
 					if(typeof body.state == 'boolean' && body.state == true){
 						if(this.debug){
-							console.log("security script running/ran");
+							console.log("networkscanner debug: security script running/ran");
 						}
 						if(typeof body.output != 'undefined'){
 							if(this.debug){
