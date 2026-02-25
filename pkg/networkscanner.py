@@ -16,6 +16,7 @@ import time
 import uuid
 import socket
 import chardet
+import requests
 from datetime import datetime, timedelta
 #import xmltodict
 import threading
@@ -491,7 +492,27 @@ class NetworkScannerAdapter(Adapter):
                     print("falling back to avahi-browse to get the candle hostnames list: ", avahi_browse_check)
                 if isinstance(avahi_browse_check,str):
                     for hostname in avahi_browse_check.splitlines():
-                        self.spotted_candle_hostnames[hostname] = {'hostname':hostname + '.local', 'last_spotted':int(time.time()), 'hostname_source':'avahi'}
+                        
+                        if not hostname in list(self.spotted_candle_hostnames.keys()):
+                            ping_response = requests.get('http://' + hostname + '.local/ping', timeout=3)
+                            if ping_response.status_code >= 200 and ping_response.status_code <= 204:
+                                if self.DEBUG:
+                                    print("succesfully pinged Candle controller that was not in the spotted_candle_hostnames dict yet: ", hostname);
+                                self.spotted_candle_hostnames[hostname] = {'hostname':hostname + '.local', 'last_spotted':int(time.time()), 'hostname_source':'avahi'}
+                            else:
+                                if self.DEBUG:
+                                    print("Pinging Candle controller that was not in the spotted_candle_hostnames dict yet failed: ", hostname, ", with response status code: ", ping_response.status_code);
+                        elif slow_counter == 2:
+                            ping_response = requests.get('http://' + hostname + '.local/ping', timeout=3)
+                            if ping_response.status_code >= 200 and ping_response.status_code <= 204:
+                                if self.DEBUG:
+                                    print("succesfully pinged known Candle controller: ", hostname);
+                                self.spotted_candle_hostnames[hostname]['last_spotted'] = int(time.time())
+                            else:
+                                if self.DEBUG:
+                                    print("failed to ping Candle controller that already in the spotted_candle_hostnames_dict. Removing: ", hostname, ". Response status code was: ", ping_response.status_code);
+                                del self.spotted_candle_hostnames[hostname]
+                        
                 
                 
                 if self.DEBUG:
@@ -530,16 +551,18 @@ class NetworkScannerAdapter(Adapter):
                     if valid_ip(ip_address) and valid_mac(mac_address):
                         ip_mac_lookup[ip_address] = mac_address
                         ip_mac_lookup[mac_address] = ip_address
-                print("_____")
-                print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
-                print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
-                print("spotted_candle_hostnames: \n", json.dumps(self.spotted_candle_hostnames,indent=4))
+                if self.DEBUG:
+                    print("_____")
+                    print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
+                    print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
+                    print("spotted_candle_hostnames: \n", json.dumps(self.spotted_candle_hostnames,indent=4))
                 # TODO: Not optimal to have to update both these sources of truth this way
                 # TODO: also validate against MAC from arp -a?
                 for _id in previously_found_keys:
                     if 'ip' in self.previously_found[_id]:
                         if str(self.previously_found[_id]['ip']) in mdns_hostname_lookup:
-                            print("previously_found ip was in mdns_hostname_lookup: ", str(self.previously_found[_id]['ip']), " -> ", mdns_hostname_lookup[str(self.previously_found[_id]['ip'])])
+                            if self.DEBUG:
+                                print("previously_found ip was in mdns_hostname_lookup: ", str(self.previously_found[_id]['ip']), " -> ", mdns_hostname_lookup[str(self.previously_found[_id]['ip'])])
                             for ifname in list(self.available_ips.keys()):
                                 for known_ip_address in list(self.available_ips[ifname].keys()):
                                     if 'thing_id' in self.available_ips[ifname][known_ip_address] and self.available_ips[ifname][known_ip_address]['thing_id'] == _id:
