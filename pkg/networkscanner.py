@@ -1100,13 +1100,16 @@ class NetworkScannerAdapter(Adapter):
                             if 'Nmap scan report for ' in nmap_line:
                             
                                 if spotted_mac == False and current_nmap_ip != None:
-                                    print("\nWARNING, IT SEEMS LIKE NMAP DID NOT RETURN A MAC ADDRESS FOR: ", current_nmap_ip)
+                                    if self.DEBUG:
+                                        print("\nWARNING, IT SEEMS LIKE NMAP DID NOT RETURN A MAC ADDRESS FOR: ", current_nmap_ip)
                             
                                 spotted_mac = False
                                 nmap_line = str(nmap_line).replace('Nmap scan report for ','').rstrip()
-                                print("nmap_line is ip? -->" + str(nmap_line) + "<--")
+                                if self.DEBUG:
+                                    print("nmap_line is ip? -->" + str(nmap_line) + "<--")
                                 if valid_ip(nmap_line):
-                                    print("OK, valid ip: ", nmap_line)
+                                    if self.DEBUG:
+                                        print("OK, valid ip: ", nmap_line)
                                     current_nmap_ip = str(nmap_line)
                                     if not current_nmap_ip in available_ips[interface_name]:
                                         available_ips[interface_name][current_nmap_ip] = {}
@@ -2331,7 +2334,7 @@ class NetworkScannerAdapter(Adapter):
         if not os.path.isdir(self.nmap_scripts_dir):
             if self.DEBUG:
                 print("ERROR: update_available_nmap_scripts_lis: could not find nMap scripts dir: ", self.nmap_scripts_dir)
-            os.system('mkdir -p ' + str(self.nmap_scripts_dir))
+            os.system('sudo mkdir -p ' + str(self.nmap_scripts_dir))
         if os.path.isdir(self.nmap_scripts_dir):
             self.nmap_scripts = [f for f in os.listdir(str(self.nmap_scripts_dir)) if os.path.isfile(os.path.join(str(self.nmap_scripts_dir), str(f)))]
 
