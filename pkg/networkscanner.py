@@ -436,89 +436,96 @@ class NetworkScannerAdapter(Adapter):
                 
             slow_counter += 1
             
-                
+            try:   
             
-            if self.busy_doing_light_scan == False and self.busy_doing_brute_force_scan == False:
-                if self.should_quick_scan:
-                    self.should_quick_scan = False
-                    self.quick_scan()
+                if self.busy_doing_light_scan == False and self.busy_doing_brute_force_scan == False:
+                    if self.should_quick_scan:
+                        self.should_quick_scan = False
+                        self.quick_scan()
                 
-            mdns_emitters = []
-            mdns_hostname_lookup = {}
-            if self.DEBUG:
-                print("\nclock: total tcpdump messages length: ", len(self.messages))
-            if slow_counter > 15:
+                mdns_emitters = []
+                mdns_hostname_lookup = {}
                 if self.DEBUG:
-                    print("skipping using tcpdump messages (once every 15 minutes)")
-            else:
-                for message in reversed(self.messages): # start from the end, with the newest messages
-                    if not '.5353 > 224.0.0.251.5353:' in message:
-                        if self.DEBUG:
-                            print("clock: strange tcpdump message: ", message)
-                    else:
-                        split_message = message.split('.5353 > 224.0.0.251.5353:')
-                        source_ip = split_message[0].split()[-1]
+                    print("\nclock: total tcpdump messages length: ", len(self.messages))
+                if slow_counter > 15:
+                    if self.DEBUG:
+                        print("skipping using tcpdump messages (once every 15 minutes)")
+                else:
+                    for message in reversed(self.messages): # start from the end, with the newest messages
+                        if not '.5353 > 224.0.0.251.5353:' in message:
+                            if self.DEBUG:
+                                print("clock: strange tcpdump message: ", message)
+                        else:
+                            split_message = message.split('.5353 > 224.0.0.251.5353:')
+                            source_ip = split_message[0].split()[-1]
                         
 
-                        if self.DEBUG:
-                            print("\nclock:  source_ip from tcpdump message: ", source_ip, message)
+                            if self.DEBUG:
+                                print("\nclock:  source_ip from tcpdump message: ", source_ip, message)
                             
-                        if valid_ip(source_ip):
+                            if valid_ip(source_ip):
                             
-                            if not source_ip in mdns_emitters:
-                                if self.DEBUG:
-                                    print("clock: spotted another mDNS emitter IP: ", source_ip)
-                                mdns_emitters.append(source_ip)
-                            
-                            if '(Cache flush) SRV ' in split_message[1] and '.:' in split_message[1]:
-                                hostname = split_message[1].split('(Cache flush) SRV ')[1].split('.:')[0].lower()
-                                if hostname.count(".") == 1 and not ' ' in hostname and not '<' in hostname and len(hostname) < 64:
+                                if not source_ip in mdns_emitters:
                                     if self.DEBUG:
-                                        print("clock: got a hostname from live mDNS messages: ", hostname, ", from: ", message)
-                                    if not source_ip in mdns_hostname_lookup:
-                                        mdns_hostname_lookup[hostname] = source_ip
-                                        mdns_hostname_lookup[source_ip] = hostname
-                                    #if 'CandleMQTT-' in message or 'candlesmarthome' in message:
-                                    #    if self.DEBUG:
-                                    #        print("clock: nice, both hostname AND Candle-MQTT/candlesmarthome were in the message: ", hostname, message)
-                                    #    self.spotted_candle_hostnames[hostname] = {'hostname':hostname,'last_spotted':int(time.time()), 'hostname_source':'tcpdump'}
-                                else:
-                                    if self.DEBUG:
-                                        print("hostname was invalid?: ",hostname)
+                                        print("clock: spotted another mDNS emitter IP: ", source_ip)
+                                    mdns_emitters.append(source_ip)
+                            
+                                if '(Cache flush) SRV ' in split_message[1] and '.:' in split_message[1]:
+                                    hostname = split_message[1].split('(Cache flush) SRV ')[1].split('.:')[0].lower()
+                                    if hostname.count(".") == 1 and not ' ' in hostname and not '<' in hostname and len(hostname) < 64:
+                                        if self.DEBUG:
+                                            print("clock: got a hostname from live mDNS messages: ", hostname, ", from: ", message)
+                                        if not source_ip in mdns_hostname_lookup:
+                                            mdns_hostname_lookup[hostname] = source_ip
+                                            mdns_hostname_lookup[source_ip] = hostname
+                                        #if 'CandleMQTT-' in message or 'candlesmarthome' in message:
+                                        #    if self.DEBUG:
+                                        #        print("clock: nice, both hostname AND Candle-MQTT/candlesmarthome were in the message: ", hostname, message)
+                                        #    self.spotted_candle_hostnames[hostname] = {'hostname':hostname,'last_spotted':int(time.time()), 'hostname_source':'tcpdump'}
+                                    else:
+                                        if self.DEBUG:
+                                            print("hostname was invalid?: ",hostname)
                                 
                 
-                avahi_browse_check = run_command("avahi-browse -p -l -a -r -k -t | grep 'CandleMQTT' | cut -d ';' -f 4 | sort | uniq | sed 's/CandleMQTT-//'")
-                if self.DEBUG:
-                    print("falling back to avahi-browse to get the candle hostnames list: ", avahi_browse_check)
-                if isinstance(avahi_browse_check,str):
-                    for hostname in avahi_browse_check.splitlines():
+                    avahi_browse_check = run_command("avahi-browse -p -l -a -r -k -t | grep 'CandleMQTT' | cut -d ';' -f 4 | sort | uniq | sed 's/CandleMQTT-//'")
+                    if self.DEBUG:
+                        print("falling back to avahi-browse to get the candle hostnames list: ", avahi_browse_check)
+                    if isinstance(avahi_browse_check,str):
+                        for hostname in avahi_browse_check.splitlines():
+                            try:
+                                if not str(hostname) in list(self.spotted_candle_hostnames.keys()):
+                                    ping_response = requests.get('http://' + str(hostname) + '.local/ping', timeout=4)
+                                    if ping_response.status_code >= 200 and ping_response.status_code <= 204:
+                                        if self.DEBUG:
+                                            print("succesfully pinged Candle controller that was not in the spotted_candle_hostnames dict yet: ", hostname);
+                                        self.spotted_candle_hostnames[str(hostname)] = {'hostname':str(hostname) + '.local', 'last_spotted':int(time.time()), 'hostname_source':'avahi'}
+                                    else:
+                                        if self.DEBUG:
+                                            print("Pinging Candle controller that was not in the spotted_candle_hostnames dict yet failed: ", hostname, ", with response status code: ", ping_response.status_code);
+
+                                elif slow_counter == 2:
+                                    ping_response = requests.get('http://' + str(hostname) + '.local/ping', timeout=4)
+                                    if ping_response.status_code >= 200 and ping_response.status_code <= 204:
+                                        if self.DEBUG:
+                                            print("succesfully pinged known Candle controller: ", hostname);
+                                        self.spotted_candle_hostnames[str(hostname)]['last_spotted'] = int(time.time())
+                                    else:
+                                        if self.DEBUG:
+                                            print("failed to ping Candle controller that was already in the spotted_candle_hostnames_dict. Removing: ", hostname, ". Response status code was: ", ping_response.status_code);
+                                        del self.spotted_candle_hostnames[str(hostname)]
+                                    
+                            except Exception as ex:
+                                if self.DEBUG:
+                                    print("caught error getting ping url " + str(hostname) + '.local/ping: ', ex)
                         
-                        if not hostname in list(self.spotted_candle_hostnames.keys()):
-                            ping_response = requests.get('http://' + hostname + '.local/ping', timeout=3)
-                            if ping_response.status_code >= 200 and ping_response.status_code <= 204:
-                                if self.DEBUG:
-                                    print("succesfully pinged Candle controller that was not in the spotted_candle_hostnames dict yet: ", hostname);
-                                self.spotted_candle_hostnames[hostname] = {'hostname':hostname + '.local', 'last_spotted':int(time.time()), 'hostname_source':'avahi'}
-                            else:
-                                if self.DEBUG:
-                                    print("Pinging Candle controller that was not in the spotted_candle_hostnames dict yet failed: ", hostname, ", with response status code: ", ping_response.status_code);
-                        elif slow_counter == 2:
-                            ping_response = requests.get('http://' + hostname + '.local/ping', timeout=3)
-                            if ping_response.status_code >= 200 and ping_response.status_code <= 204:
-                                if self.DEBUG:
-                                    print("succesfully pinged known Candle controller: ", hostname);
-                                self.spotted_candle_hostnames[hostname]['last_spotted'] = int(time.time())
-                            else:
-                                if self.DEBUG:
-                                    print("failed to ping Candle controller that already in the spotted_candle_hostnames_dict. Removing: ", hostname, ". Response status code was: ", ping_response.status_code);
-                                del self.spotted_candle_hostnames[hostname]
-                        
-                
-                
-                if self.DEBUG:
-                    print("last minute's mdns_emitters: ", mdns_emitters)
+                    if self.DEBUG:
+                        print("last minute's mdns_emitters: ", mdns_emitters)
             
-                        
+                
+            except Exception as ex:
+                if self.DEBUG:
+                    print("clock: caught error in pre-check: ", ex)
+                
             self.messages = []
             
             succesfully_found = 0
@@ -542,7 +549,6 @@ class NetworkScannerAdapter(Adapter):
                 
                 previously_found_keys = list(self.previously_found.keys())
                 
-                
                 fresh_arpa_output = str(run_command('arp -a | grep -v incomplete'))
                 ip_mac_lookup = {}
                 for line in fresh_arpa_output.splitlines():
@@ -556,6 +562,7 @@ class NetworkScannerAdapter(Adapter):
                     print("mdns_hostname_lookup: \n", json.dumps(mdns_hostname_lookup,indent=4))
                     print("ARPA ip_mac_lookup: \n", json.dumps(ip_mac_lookup,indent=4))
                     print("spotted_candle_hostnames: \n", json.dumps(self.spotted_candle_hostnames,indent=4))
+                
                 # TODO: Not optimal to have to update both these sources of truth this way
                 # TODO: also validate against MAC from arp -a?
                 for _id in previously_found_keys:
