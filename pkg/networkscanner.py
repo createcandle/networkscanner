@@ -2605,10 +2605,21 @@ class NetworkScannerAdapter(Adapter):
                 def read_stdout():
                     while self.running:
                         msg = self.tcpdump.stdout.readline()
-                        self.messages.append(msg.decode())
+                        new_msg = msg.decode()
+                        if len(str(new_msg)) > 2:
+                            self.messages.append(new_msg)
                         time.sleep(0.0001)
                     if self.DEBUG:
                         print("tcpdump read_stdout closed")
+                    
+                    if self.tcpdump and self.tcpdump.poll and self.tcpdump.poll() == None:
+                         self.tcpdump.terminate()
+                         time.sleep(0.1)
+                         if self.tcpdump and self.tcpdump.poll() == None:
+                             self.tcpdump.kill()
+                             time.sleep(0.2)
+                             if self.tcpdump and self.tcpdump.poll() == None:
+                                 os.system('sudo pkill -f tcpdump')
                     self.tcpdump = None
                     
                 self.stdout_thread = threading.Thread(target=read_stdout)
