@@ -2604,10 +2604,13 @@ class NetworkScannerAdapter(Adapter):
 
                 def read_stdout():
                     while self.running:
-                        msg = self.tcpdump.stdout.readline()
-                        new_msg = msg.decode()
-                        if len(str(new_msg)) > 2:
-                            self.messages.append(new_msg)
+                        if self.tcpdump:
+                            msg = self.tcpdump.stdout.readline()
+                            new_msg = msg.decode()
+                            if len(str(new_msg)) > 2:
+                                self.messages.append(new_msg)
+                        else:
+                            break
                         time.sleep(0.0001)
                     if self.DEBUG:
                         print("tcpdump read_stdout closed")
