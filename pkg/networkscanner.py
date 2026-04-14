@@ -320,7 +320,7 @@ class NetworkScannerAdapter(Adapter):
             t.start()
         except:
             if self.DEBUG:
-                print("Error starting the continous light scan thread")
+                print("Error starting the clock thread")
         
         self.ready = True
         
@@ -461,7 +461,7 @@ class NetworkScannerAdapter(Adapter):
                         
 
                             if self.DEBUG:
-                                print("\nclock:  source_ip from tcpdump message: ", source_ip, message)
+                                print("\nclock debug:  source_ip from tcpdump message: ", source_ip, message)
                             
                             if valid_ip(source_ip):
                             

@@ -378,6 +378,8 @@ body:not(.kiosk) a[class^='extension-networkscanner-list-item-ip']:hover{
 	overflow-wrap: break-word;
 }
 
+.extension-networkscanner-list-item-port-port,
+.extension-networkscanner-list-item-port-protocol,
 .extension-networkscanner-list-item-port-nr,
 .extension-networkscanner-list-item-info-key{
 	min-width:8rem;

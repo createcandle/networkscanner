@@ -89,12 +89,23 @@
 		hide() {
 			//console.log("networkscanner hide called");
 			try{
-                clearInterval(this.interval);
+				if(this.interval){
+					clearInterval(this.interval);
+				}
                 this.interval = null;
 			}
 			catch(e){
-				//console.log("internet radio: no interval to clear? " + e);
-			}    
+				//console.log("network scanner: no interval to clear? ", e);
+			}
+			
+			try{
+                if(document.getElementById('extension-networkscanner-menu-item').classList.contains('selected') == false){
+                    this.view.innerHTML = "";
+                }
+			}
+            catch(err){
+                console.log("networkscanner addon: caught error in hide: ", err);
+            }
 		}
         
         
