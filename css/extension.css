@@ -846,7 +846,7 @@ body.kiosk #extension-networkscanner-switch-candles-menu{
 	margin:0;
 	padding:0;
 	background-color: #0a324f;
-    max-height: calc(100% - 16.1rem);
+    max-height: calc(100% - 8.1rem);
 }
 
 #extension-networkscanner-switch-candles-menu ol > li > a{
@@ -862,7 +862,7 @@ body.kiosk #extension-networkscanner-switch-candles-menu{
     list-style-type: none;
     margin: 0;
     padding: 0; 
-    max-height: calc(100% - 16.1rem);
+    max-height: calc(100% - 8.1rem);
     overflow: auto;
 }
 
@@ -896,6 +896,7 @@ body.kiosk #extension-networkscanner-switch-candles-menu{
 	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded > ol{
 		display:flex;
 		flex-direction:column;
+		box-shadow: 0 20px 20px rgba(0,0,0,.5);
 	}
 	#extension-networkscanner-switch-candles-menu.extension-networkscanner-switch-candles-menu-expanded ol > li:hover{
 		background-color:#7caed1;
