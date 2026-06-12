@@ -63,6 +63,7 @@ def extract_ip(line):
     #p = re.compile(r'(?:[0-9a-fA-F]:?){12}')
     #p = re.compile(r'((([a-zA-z0-9]{2}[-:]){5}([a-zA-z0-9]{2}))|(([a-zA-z0-9]{2}:){5}([a-zA-z0-9]{2})))')
     # from https://stackoverflow.com/questions/4260467/what-is-a-regular-expression-for-a-mac-address
+
     if len(ip_addresses):
         #print("extract_ip:  ip_addresses: ", ip_addresses)
         if valid_ip(str(ip_addresses[0])):
@@ -70,8 +71,28 @@ def extract_ip(line):
         elif len(ip_addresses[0]) and valid_ip(str(ip_addresses[0][0])):
             #print("extract_ip: two layers deep")
             return str(ip_addresses[0][0])
+    #return extract_ip6(line):
     return None
-    
+
+# Only gets the first IP6 address
+def extract_ip6(line):
+    ip6_addresses = re.findall(r'(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::(?:[0-9a-fA-F]{1,4}:){0,6}[0-9a-fA-F]{1,4}|[0-9a-fA-F]{1,4}::(?:[0-9a-fA-F]{1,4}:){0,5}[0-9a-fA-F]{1,4}', str(line))
+    if len(ip6_addresses):
+        if valid_ip6(str(ip6_addresses[0])):
+            return str(ip6_addresses[0])
+        elif len(ip6_addresses[0]) and valid_ip6(str(ip_addresses[0][0])):
+            #print("extract_ip6: two layers deep")
+            return str(ip6_addresses[0][0])
+    return None
+
+
+def extract_any_ip(line):
+    ip4 = extract_ip(line)
+    if ip4 == None:
+        return extract_ip6(line)
+    else:
+        return ip4
+
 def valid_ip(ip=None):
     valid = False
     if isinstance(ip,str):
@@ -96,6 +117,15 @@ def valid_ip6(value):
     except ValueError:
         return False
     return False
+
+def valid_any_ip(value):
+    valid_ip4 = valid_ip(value)
+    if valid_ip4 == False:
+        return valid_ip6(value)
+    else:
+        return True
+
+
 
 def extract_mac(line):
     if isinstance(line,str):
@@ -168,7 +198,22 @@ def get_own_ip():
     return IP
 
 
+def get_env():
+    my_env = os.environ.copy()
+    if not "DISPLAY" in my_env:
+        #print("get_env: adding display variable to environment")
+        my_env["DISPLAY"] = ':0'
 
+    if not "XDG_RUNTIME_DIR" in my_env:
+        user_index = run_command('id -u')
+        if isinstance(user_index,str):
+            #print("user_index: -->" + str(user_index) + "<--")
+            user_index = str(user_index).strip().rstrip()
+            if user_index.isdigit():
+                my_env["XDG_RUNTIME_DIR"] = "/run/user/" + str(user_index)
+
+
+    return my_env
 
 
 

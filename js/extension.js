@@ -99,9 +99,11 @@
 			}
 			
 			try{
-                if(document.getElementById('extension-networkscanner-menu-item').classList.contains('selected') == false){
-                    this.view.innerHTML = "";
-                }
+				setTimeout(() => {
+	                if(document.getElementById('extension-networkscanner-menu-item').classList.contains('selected') == false){
+	                    this.view.innerHTML = "";
+	                }
+				},5000);
 			}
             catch(err){
                 console.log("networkscanner addon: caught error in hide: ", err);
@@ -2222,13 +2224,16 @@
 							title = 'WiFi connection';
 						}
 						else if(ifname == 'wlan1' || ifname == 'mlan1'){
-							title = 'WiFi connection 2';
+							title = 'Dedicated Hotspot (' + ifname + ')';
 						}
 						else if(ifname == 'usb0'){
 							title = 'USB Tethering';
 						}
 						else if(ifname == 'usb1'){
 							title = 'USB Tethering 2';
+						}
+						else if(ifname == 'wpan0'){
+							title = 'Matter Thread mesh';
 						}
 					
 						if(interface_container_el.innerHTML == ''){

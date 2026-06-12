@@ -138,6 +138,16 @@ class NetworkScannerAdapter(Adapter):
         self.data_dir_path = os.path.join(self.user_profile['dataDir'], self.addon_name)
         self.persistence_file_path = os.path.join(self.data_dir_path,'persistence.json')
         
+        # Matter thread
+        self.thread_ip_addresses = {}
+        self.matter_adapter_dir_path = os.path.join(self.user_profile['addonsDir'], 'matter-adapter')
+        self.ot_ctl_path = os.path.join(self.matter_adapter_dir_path,'thread','ot-ctl')
+        self.addon_thread_dir_path = os.path.join(self.matter_adapter_dir_path,'thread')
+        self.matter_addon_installed = False
+        if os.path.isdir(self.matter_adapter_dir_path):
+            self.matter_addon_installed = True
+
+
         self.nmap_scripts = []
         self.nmap_scripts_dir = os.path.join(os.path.expanduser('~'), '.webthings','etc','nmap','scripts')
 
@@ -609,7 +619,7 @@ class NetworkScannerAdapter(Adapter):
                     
                     if not _id in self.devices:
                         if self.DEBUG:
-                            print("\n\nclock ERROR: _id was not in self.devices\n\n")
+                            print("\n\nclock ERROR: _id from previously_found_keys was not in self.devices (yet).  _id, previously_found_keys: ", _id, previously_found_keys )
                         continue
                     
                     if _id in self.previously_found and 'ip' in self.previously_found[_id] and valid_ip(self.previously_found[_id]['ip']):
@@ -938,7 +948,7 @@ class NetworkScannerAdapter(Adapter):
                 ip_link_show_list = json.loads(ip_link_show_raw_json)
                 
                 for interface_item in ip_link_show_list:
-                    if 'ifname' in interface_item and 'link_type' in interface_item and interface_item["link_type"] == "ether":
+                    if 'ifname' in interface_item and ('link_type' in interface_item and interface_item["link_type"] == "ether") or interface_item['ifname'] == 'wpan0': # wpan0 is Thread
                         
                         interface_address_check = str(run_command('ip -p -j addr show ' + str(interface_item['ifname'])))
                         if 'addr_info' in interface_address_check:
@@ -955,7 +965,9 @@ class NetworkScannerAdapter(Adapter):
                                 continue
                         else:
                             available_interfaces[str(interface_item['ifname'])] = interface_item
-                
+
+
+
                 self.available_interfaces = available_interfaces
                 self.quick_scan_phase += 1
             if self.DEBUG:
@@ -966,6 +978,11 @@ class NetworkScannerAdapter(Adapter):
                 print("networkscanner debug: caught error checking for available network interfaces: " + str(ex))
 
 
+
+
+
+
+        
 
 
     def check_available_ips(self):
@@ -1181,7 +1198,7 @@ class NetworkScannerAdapter(Adapter):
                             
                             
                             
-                    elif '::' in str(ip_data['local']) and valid_ip6(ip_data['local']):
+                    elif valid_ip6(ip_data['local']):
                         if self.DEBUG:
                             print("interface has an ipv6 address:" + str(ip_data['local']))
                         if valid_ip(interface_ip4):
@@ -1192,7 +1209,7 @@ class NetworkScannerAdapter(Adapter):
                         #nmap_quick_scan_results = str(run_command("nmap --scan-delay=25ms -6 -sn " + str(ip_data['local']) + "/64 | grep 'Nmap scan report for'"))
                     else:
                         if self.DEBUG:
-                            print("\nERROR, interface IP address fell through, doesn't seem a valid ip4 or ip6 IP:" + str(ip_data['local']))
+                            print("\nERROR, interface IP address fell through, doesn't seem a valid ip4 or ip6 IP: " + str(ip_data['local']))
                     
                     
                                 
@@ -1219,7 +1236,190 @@ class NetworkScannerAdapter(Adapter):
         #    print("check_available_ips: ip_neighbor_output: " + str(ip_neighbor_output))
         #    print("")
         #    print("check_available_ips: ip_neighbor_output2: " + str(ip_neighbor_output2))
+        
+
+
+        try:
+            if os.path.isdir(self.matter_adapter_dir_path):
+                self.matter_addon_installed = True
+                if self.DEBUG:
+                    print("check_thread: OK, Matter addon seems to be installed at: ", self.matter_adapter_dir_path)
             
+                this_br_ip = None
+                thread_ip_addresses = {}
+                ip_link_show_output = str(run_command('ip link show'))
+                if self.DEBUG:
+                    print("check_thread: ip_link_show_output: \n", ip_link_show_output)
+                if 'wpan0:' in ip_link_show_output and os.path.isfile(self.ot_ctl_path):
+                    if self.DEBUG:
+                        print("check_thread: both wpan0 and OTBR cli spotted")
+                    
+                    if not 'wpan0' in available_ips.keys():
+                        available_ips['wpan0'] = {}
+
+                    thread_border_routers_check = self.run_ot_ctl_command('br routers')
+                    if isinstance(thread_border_routers_check,str):
+                        thread_border_routers_check = str(thread_border_routers_check).replace('Done','')
+                        thread_border_routers_check = thread_border_routers_check.rstrip().strip()
+                        for br_line in thread_border_routers_check.splitlines():
+                            if '(this BR)' in br_line:
+                                possible_this_br_ip = br_line.split(' ')[0]
+                                if valid_ip6(str(possible_this_br_ip)):
+                                    this_br_ip = str(possible_this_br_ip)
+                                    if not this_br_ip in available_ips['wpan0']:
+                                        available_ips['wpan0'][this_br_ip] = {}
+                                    available_ips['wpan0'][this_br_ip]['ip'] = this_br_ip
+                                    available_ips['wpan0'][this_br_ip]['ip_source'] = 'OTBR'
+                                    if not 'ip6' in available_ips['wpan0'][this_br_ip]:
+                                        available_ips['wpan0'][this_br_ip]['ip6'] = {}
+                                    available_ips['wpan0'][this_br_ip]['ip6'][this_br_ip] = {'ip6':this_br_ip,'ip6_source':'OTBR'}
+                                    available_ips['wpan0'][this_br_ip]['candle'] = True
+                                    available_ips['wpan0'][this_br_ip]['self'] = True
+                                    if "ip4_services" not in available_ips['wpan0'][this_br_ip]:
+                                        available_ips['wpan0'][this_br_ip]['ip4_services'] = {}
+                                    if "ip6_services" not in available_ips['wpan0'][this_br_ip]:
+                                        available_ips['wpan0'][this_br_ip]['ip6_services'] = {}
+                                    if 'tags' not in available_ips['wpan0'][this_br_ip]:
+                                        available_ips['wpan0'][this_br_ip]['tags'] = []
+                                    available_ips['wpan0'][this_br_ip]['tags'].append('Matter Thread Border Router')
+
+                                    # While this is not the hostname, it's still better than 'unnamed'.
+                                    thread_networkname_check = self.run_ot_ctl_command('networkname')
+                                    if self.DEBUG:
+                                        print("thread_networkname_check: ", thread_networkname_check)
+                                    if isinstance(thread_networkname_check,str):
+                                        thread_networkname_check = thread_networkname_check.replace('Done','').rstrip().strip()
+                                        if len(thread_networkname_check) > 2:
+                                            available_ips['wpan0'][this_br_ip]['hostname'] = thread_networkname_check
+
+                                    # This gets lots of additional IP addresses for the controller itself.
+                                    thread_ipaddr_check = self.run_ot_ctl_command('ipaddr')
+                                    if self.DEBUG:
+                                        print("thread_ipaddr_check: ", thread_ipaddr_check)
+                                    if isinstance(thread_ipaddr_check,str):
+                                        for ipaddr_line in thread_ipaddr_check.splitlines():
+                                            ipaddr_line = ipaddr_line.rstrip()
+                                            ipaddr_line = ipaddr_line.strip()
+                                            if ipaddr_line != 'Done':
+                                                if valid_ip6(ipaddr_line):
+                                                    if self.DEBUG:
+                                                        print("ipaddr: ipaddr_line:  -->" + str(ipaddr_line) + "<--")
+                                                    available_ips['wpan0'][this_br_ip]['ip6'][ipaddr_line] = {'ip6':ipaddr_line,'ip6_source':'OTBR'}
+
+
+                                        # It seems the OTBR itself does not use this Matter Discovery port? Only the actual devices?
+                                        #available_ips['wpan0'][this_br_ip]["ip6_services"] = {"5540": {
+                                        #        "port": "5540",
+                                        #        "protocol": "tcp",
+                                        #        "service": "Matter",
+                                        #        "state": "unknown"
+                                        #        }}
+
+
+                    #thread_ipaddr_linklocal_check = self.run_ot_ctl_command('ipaddr linklocal')
+                    #if isinstance(thread_ipaddr_linklocal_check,str):
+                    #    thread_ipaddr_linklocal_check = thread_ipaddr_linklocal_check.replace('Done','').rstrip().strip()
+                    #if self.DEBUG:
+                    #    print("check_thread: thread_ipaddr_linklocal_check: -->" + str(thread_ipaddr_linklocal_check) + "<--")
+
+
+
+                    srp_server_service_check = self.run_ot_ctl_command('srp server service')
+                    if isinstance(srp_server_service_check,str):
+                        srp_server_service_check = srp_server_service_check.replace('Done','').rstrip().strip()
+                        if self.DEBUG:
+                            print("check_thread: srp_server_service_check: \n", srp_server_service_check,"\n")
+                        
+                        current_thread_device = {}
+                        for srp_line in srp_server_service_check.splitlines():
+
+                            # At into the start of the next device first save the previously scraped together one
+                            if '._matter._tcp.' in srp_line and 'host:' not in srp_line:
+                                if 'ip' in current_thread_device.keys():
+                                    available_ips['wpan0'][ str(current_thread_device['ip']) ] = current_thread_device
+                                    current_thread_device = {}
+                                
+                            # Scraping together info from what is essentially an mDNS record
+                            elif 'addresses:' in srp_line:
+                                first_ip6 = extract_ip6(srp_line)
+                                if valid_ip6(first_ip6):
+                                    current_thread_device['ip'] = first_ip6
+                                    current_thread_device['ip_source'] = 'OTBR'
+                                    current_thread_device['ip6'] = {first_ip6:{'ip6':first_ip6,'ip6_source':'OTBR'}}
+                            elif 'host:' in srp_line and '.' in srp_line:
+                                srp_line = srp_line.replace('host:','')
+                                srp_line = srp_line.split('.')[0]
+                                if len(str(srp_line)) > 5:
+                                    current_thread_device['hostname'] = str(srp_line)
+                            elif 'TXT:' in srp_line:
+                                srp_line = srp_line.replace('TXT:','')
+                                current_thread_device['TXT'] = srp_line
+                            elif 'port:' in srp_line:
+                                srp_line = srp_line.replace('port:','')
+                                ports = srp_line.split(' ')
+                                for port in ports:
+                                    if str(port).isdigit():
+                                        if 'ip6_services' not in current_thread_device:
+                                            current_thread_device['ip6_services'] = {}
+                                        current_thread_device['ip6_services'][port] = {
+                                                                'nr':port,
+                                                                'protocol': 'tcp',
+                                                                'service': 'Matter',
+                                                                'state':'unknown'
+                                                                }
+                                
+                        # and save the final one
+                        if 'ip' in current_thread_device.keys():
+                            available_ips['wpan0'][ str(current_thread_device['ip']) ] = current_thread_device
+
+
+
+                    
+
+                    """
+                    # This gets lots of IP addresses for the controller itself. Might be interesting.
+                    thread_ipaddr_check = self.run_ot_ctl_command('ipaddr')
+                    if self.DEBUG:
+                        print("thread_ipaddr_check: ", thread_ipaddr_check)
+                    if isinstance(thread_ipaddr_check,str):
+                        for ipaddr_line in thread_ipaddr_check.splitlines():
+                            ipaddr_line = line.rstrip()
+                            ipaddr_line = line.strip()
+                            if ipaddr_line != 'Done':
+                                if valid_ip6(ipaddr_line):
+                                    if self.DEBUG:
+                                        print("ipaddr: ipaddr_line:  -->" + str(ipaddr_line) + "<--")
+                                    thread_ip_addresses[ipaddr_line] = {}
+                        self.thread_ip_addresses = thread_ip_addresses
+                    if self.DEBUG:
+                        print("check_thread: self.thread_ip_addresses is now: ", self.thread_ip_addresses)
+                    """
+
+                else:
+                    if self.DEBUG:
+                        print("\nERROR: check_thread: Matter addon is installed, but not getting thread IP addresses.\nWas wpan0 in ip_link_show_output and does OTBR cli binary exist at this path?: ", self.ot_ctl_path)
+                
+            
+            
+            else:
+                self.matter_addon_installed = False
+                if self.DEBUG:
+                    print("check_thread: Matter addon does not seem to be installed, skipping matter check")
+                
+
+
+        except Exception as ex:
+            print("caught error in Matter Thread scan: ", ex)
+        
+
+
+
+
+
+
+
+
+
             
         for line in ip_neighbor_output.splitlines():
             if line.strip().endswith("REACHABLE") or line.endswith("STALE") or line.endswith("DELAY"):
@@ -1284,13 +1484,17 @@ class NetworkScannerAdapter(Adapter):
                 if self.DEBUG:
                     print("\nERROR: a line from self.avahi_lines was not a string: ", line)
                 continue
-            avahi_ip_address = extract_ip(str(line))
+            avahi_ip_address = extract_any_ip(str(line))
             #print("avahi_ip_address: ", avahi_ip_address)
-            if valid_ip(avahi_ip_address):
+            if valid_any_ip(avahi_ip_address):
                 #print("extracted IP from avahi line: ", avahi_ip_address)
                 for ifname in available_ips.keys():
                     if line.startswith('=;' + str(ifname) + ';') and not 'shairport' in line.lower():
        
+                        if '_meshcop._udp.local' in line:
+                            if self.DEBUG:
+                                print("Spotted a Thread Border Router in avahi line: \n", line, "\n")
+
                         already_used_that_mac = False
                         mac_address = str(extract_mac(line))
                         if self.DEBUG and mac_address != 'None':
@@ -1338,39 +1542,53 @@ class NetworkScannerAdapter(Adapter):
         self.quick_scan_phase += 3
         self.available_ips = available_ips
         
+        found_hostname_ips = None
         found_hostname_ips = []
+        unmatched_hostnames = None
         unmatched_hostnames = []
         
         
+
+        if self.DEBUG:
+            print("- found_hostname_ips before avahi hostnames check: ", json.dumps(found_hostname_ips,indent=2))
+            print(" - self.available_ips before avahi hostnames check: ", json.dumps(self.available_ips,indent=2))
         
         # use avahi to get hostnames
         
         for line in self.avahi_lines:
             
             found_a_hostname = False
-            avahi_ip_address = extract_ip(line)
+            avahi_ip_address = extract_any_ip(line)
             #print("avahi_ip_address for hostname: ", avahi_ip_address)
-            if valid_ip(avahi_ip_address):
-                if avahi_ip_address in found_hostname_ips:
+            if valid_any_ip(avahi_ip_address):
+                if str(avahi_ip_address) in found_hostname_ips:
                     
                     curiosity_avahi_hostname = extract_hostname_from_avahi_line(line)
                     if self.DEBUG:
-                        print("already have a hostname for that IP, no need to get the one in the avahi line: ", avahi_ip_address, curiosity_avahi_hostname)
+                        print("in theory already have a hostname for that IP, no need to get the one in the avahi line:  avahi_ip_address, curiosity_avahi_hostname: ", avahi_ip_address, curiosity_avahi_hostname)
+                        print("found_hostname_ips: ", found_hostname_ips)
+                        
                     
                     # out of curiosity, quickly check if the avahi hostname matches to the one already found
-                    if curiosity_avahi_hostname:
+                    if isinstance(curiosity_avahi_hostname,str) and len(curiosity_avahi_hostname) > 1:
                         for curiosity_ifname in list(self.available_ips.keys()):
                             if avahi_ip_address in self.available_ips[curiosity_ifname]:
                                 if not 'hostname' in self.available_ips[curiosity_ifname][avahi_ip_address]:
                                     if self.DEBUG:
-                                        print("\nERROR, according to found_hostname_ips that ip should have a hostname, but it doesn't: ", avahi_ip_address, found_hostname_ips)
-                                    break
+                                        print("\nERROR, according to found_hostname_ips that ip should have a hostname, but it doesn't.  curiosity_avahi_hostname, curiosity_ifname, avahi_ip_address, found_hostname_ips: ", curiosity_avahi_hostname, avahi_ip_address, found_hostname_ips)
+                                        print("- self.available_ips[curiosity_ifname][avahi_ip_address] has no hostname for curiosity_ifname, avahi_ip_address: \n", curiosity_ifname, avahi_ip_address, "\n", json.dumps(self.available_ips[curiosity_ifname][avahi_ip_address],indent=2),"\n")
+                                        print("- EXPERIMENT: adding the avahi hostname to plug the gap")
+                                    self.available_ips[curiosity_ifname][avahi_ip_address]['hostname'] = curiosity_avahi_hostname
+                                    #break
+                                    #continue
                                 elif str(self.available_ips[curiosity_ifname][avahi_ip_address]['hostname']) != str(curiosity_avahi_hostname):
                                     if self.DEBUG:
                                         print("\nWARNING, avahi hostname is different from the one found earlier. Avahi seems outdated? hostnames and line: ", str(self.available_ips[curiosity_ifname][avahi_ip_address]['hostname']), str(curiosity_avahi_hostname), line)
                                     outdated_avahi_data.append(curiosity_avahi_hostname)
                                     outdated_avahi_data.append(avahi_ip_address)
-                            
+                            else:
+                                if self.DEBUG:
+                                    print("WARNING: avahi IP is not in self.available_ips for ifname: ", curiosity_ifname, avahi_ip_address)
                     
                     continue
                 
@@ -1683,6 +1901,37 @@ class NetworkScannerAdapter(Adapter):
         line = None
         
         
+       
+        # Add very basic list of Matter Thread devices, to indicate that they are indeed ipv6 devices and could potentially be hacked and reach the main network
+        
+
+
+
+        """
+        if self.matter_addon_installed and len(self.thread_ip_addresses.keys()):
+            if 'wpan0' not in available_ips:
+                if self.DEBUG:
+                    print("wpan0 was not inavailable_ips yet, adding self.thread_ip_addresses wholesale")
+                available_ips['wpan0'] = self.thread_ip_addresses
+            else:
+                for thread_ip6_address in self.thread_ip_addresses.keys():
+                    if thread_ip6_address not in available_ips['wpan0']:
+                        if self.DEBUG:
+                            print("adding thread_ip6_address to available_ips['wpan0']: ", thread_ip6_address)
+                        available_ips['wpan0'][thread_ip6_address] = self.thread_ip_addresses[thread_ip6_address]
+                    else:
+                        if self.DEBUG:
+                            print("Nice, available_ips['wpan0'] already contained an entry for this thread_ip6_address: ", thread_ip6_address, available_ips['wpan0'][thread_ip6_address])
+
+            if self.DEBUG:
+                print("available_ips['wpan0'] is now self.thread_ip_addresses: ", available_ips['wpan0'])
+        else:
+            if self.DEBUG:
+                print("NOT ADDING MATTER THREAD IPS")
+                print('- self.matter_addon_installed: ', self.matter_addon_installed)
+                print(" - self.thread_ip_addresses.keys(): ", self.thread_ip_addresses.keys())
+        """
+
         
         self.available_ips = available_ips
         if self.DEBUG:
@@ -1731,6 +1980,8 @@ class NetworkScannerAdapter(Adapter):
         all_known_ids = []
         
         for ifname in list(self.available_ips.keys()):
+            if ifname == 'wpan0':
+                continue
             for known_ip_address in list(self.available_ips[ifname].keys()):
                 if 'mac_id' in self.available_ips[ifname][known_ip_address] and len(str(self.available_ips[ifname][known_ip_address]['mac_id'])) > 4:
                     _id = str(self.available_ips[ifname][known_ip_address]['mac_id'])
@@ -1832,6 +2083,8 @@ class NetworkScannerAdapter(Adapter):
             if previously_found_id in self.previously_found and 'hostname' in self.previously_found[previously_found_id]: # SIC just making sure the previously_found_id is actually still in there
                 
                 for ifname in list(self.available_ips.keys()):
+                    if ifname == 'wpan0':
+                        continue
                     for known_ip_address in list(self.available_ips[ifname].keys()):
                         if 'thing_id' in self.available_ips[ifname][known_ip_address]:
                             if self.DEBUG:
@@ -1928,6 +2181,8 @@ class NetworkScannerAdapter(Adapter):
                 hints['ip'] = ''
                 
             for ifname in list(self.available_ips.keys()):
+                if ifname == 'wpan0':
+                    continue
                 if self.DEBUG:
                     print("rematch: checking interface: " + str(ifname))
                 
@@ -2087,6 +2342,8 @@ class NetworkScannerAdapter(Adapter):
             
             print("\n\nREMATCH SANITY CHECK")
             for ifname in list(self.available_ips.keys()):
+                if ifname == 'wpan0':
+                    continue
                 for known_ip_address in list(self.available_ips[ifname].keys()):
                     if 'thing_id' in self.available_ips[ifname][known_ip_address]:
                         _id = self.available_ips[ifname][known_ip_address]['thing_id']
@@ -2306,6 +2563,8 @@ class NetworkScannerAdapter(Adapter):
                 self.quick_scan_phase = 50
             
                 self.should_save = True
+
+                
                 
                 
             except Exception as ex:
@@ -2318,6 +2577,9 @@ class NetworkScannerAdapter(Adapter):
             
             if self.DEBUG:
                 print("\nQUICK SCAN COMPLETE\n")
+            
+            if self.DEBUG:
+                    print("\nquick_scan: final self.available_ips: \n", json.dumps(self.available_ips,indent=2), "\n\n\n")
             
         else:
             if self.DEBUG:
@@ -2635,6 +2897,42 @@ class NetworkScannerAdapter(Adapter):
             if self.DEBUG:
                 print("caught error in tcpdump_listener: " + str(ex))
 
+
+
+    # Matter Thread OTBR cli
+    def run_ot_ctl_command(self, cmd, timeout_seconds=30):
+        try:
+            if not os.path.isfile(self.ot_ctl_path):
+                if self.DEBUG:
+                    print("\nWARNING, run_ot_ctl_command: ot-ctl is missing: ", self.ot_ctl_path)
+                return None
+            my_env = get_env()
+            my_env["LD_LIBRARY_PATH"] = '{}'.format(self.addon_thread_dir_path)
+
+            data_path = '/data'
+            #my_env["TMPDIR"] = '{}'.format('/tmp')
+            #my_env["TMPDIR"] = '{}'.format(data_path)
+
+            command = 'sudo ' + str(self.ot_ctl_path) + ' ' + str(cmd)
+            #if ('dataset' in cmd or cmd == 'factoryreset') and cmd != 'dataset': # and not 'dataset set active' in cmd:
+            #    #command = command + ' --storage-directory ' + str(data_path)
+            #    command = command + ' --storage-directory ' + str(self.data_thread_dir_path)
+
+            if self.DEBUG:
+                print("network scanner: run_ot_ctl_command: \n" + str(command))
+            #op = subprocess.run('sudo ' + str(self.ot_ctl_path) + ' ' + str(cmd) + ' --storage-directory ' + str(self.data_thread_dir_path), timeout=timeout_seconds, env=my_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
+            op = subprocess.run(command, timeout=timeout_seconds, env=my_env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, universal_newlines=True)
+
+            if op.returncode == 0:
+                return str(op.stdout).rstrip()
+            else:
+                if op.stderr:
+                    return str(op.stderr).rstrip()
+
+        except Exception as ex:
+            if self.DEBUG:
+                print("caught error in run_ot_ctl_command: " + str(ex))
+            return None
 
     
 

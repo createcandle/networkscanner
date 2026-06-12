@@ -27,6 +27,8 @@ class NetworkScannerAPIHandler(APIHandler):
         self.adapter = adapter
         self.DEBUG = self.adapter.DEBUG
 
+        self.last_api_request_timestamp = 0
+
         if self.DEBUG:
             print("init of network presence api handler")
         
@@ -82,7 +84,11 @@ class NetworkScannerAPIHandler(APIHandler):
                     
                     if self.DEBUG:
                         print("got api request. action: " + str(action))
-                    
+                        if self.last_api_request_timestamp != 0:
+                            seconds_since_last_api_request = time.time() - self.last_api_request_timestamp
+                            print("seconds_since_last_api_request: ", round(seconds_since_last_api_request,2))
+                        self.last_api_request_timestamp = time.time()
+
                     if action == 'init':
                         if self.DEBUG:
                             print("in init")
