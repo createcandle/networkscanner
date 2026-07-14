@@ -468,10 +468,12 @@ class NetworkScannerAdapter(Adapter):
                         else:
                             split_message = message.split('.5353 > 224.0.0.251.5353:')
                             source_ip = split_message[0].split()[-1]
+                            if isinstance(source_ip,str):
+                                source_ip = extract_ip(source_ip)
                         
 
                             if self.DEBUG:
-                                print("\nclock debug:  source_ip from tcpdump message: ", source_ip, message)
+                                print("\nclock debug:  potential source_ip from tcpdump message: ", source_ip, message)
                             
                             if valid_ip(source_ip):
                             

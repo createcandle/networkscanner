@@ -1398,6 +1398,7 @@
 								}
 								
 							}
+
 								
 							let link_url = null;
 							
